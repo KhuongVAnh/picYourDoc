@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   createAppointmentApi,
@@ -8,6 +8,7 @@ import {
 } from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime } from "../lib/date";
+import { ROUTES } from "../lib/routes";
 
 // Trang tạo mới/đổi lịch hẹn theo mode slot hoặc đề xuất giờ.
 export function NewAppointmentPage() {
@@ -126,7 +127,7 @@ export function NewAppointmentPage() {
         await createAppointmentApi(payload, accessToken);
       }
 
-      navigate("/patient/appointments");
+      navigate(ROUTES.app.patient.appointments);
     } catch (apiError) {
       setError(apiError.message || "Không thể tạo lịch hẹn");
     } finally {
@@ -135,103 +136,97 @@ export function NewAppointmentPage() {
   }
 
   return (
-    <article className="panel space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
+    <section className="space-y-4">
+      <header className="surface-card flex flex-wrap items-center justify-between gap-2 p-4">
         <h2 className="text-xl font-semibold text-slate-900">
           {rescheduleOf ? "Đổi lịch hẹn" : "Tạo lịch hẹn mới"}
         </h2>
-        <Link className="app-link" to="/patient/appointments">
+        <Link className="btn-soft px-4 py-2 text-sm" to={ROUTES.app.patient.appointments}>
           Quay lại lịch hẹn
         </Link>
       </header>
 
-      <form className="grid gap-3" onSubmit={handleSubmit}>
-        <label className="text-sm font-medium text-slate-700">
-          Chọn bác sĩ
-          <select
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            value={selectedDoctorId}
-            onChange={(event) => {
-              setSelectedDoctorId(event.target.value);
-              setSlotId("");
-            }}
-          >
-            <option value="">-- Chọn bác sĩ --</option>
-            {doctors.map((doctor) => (
-              <option key={doctor.doctorId} value={doctor.doctorId}>
-                {doctor.fullName} - {doctor.specialty} ({doctor.location})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="text-sm font-medium text-slate-700">
-          Chế độ đặt lịch
-          <select
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            value={mode}
-            onChange={(event) => setMode(event.target.value)}
-          >
-            <option value="slot">Chọn slot có sẵn</option>
-            <option value="proposal">Đề xuất giờ</option>
-          </select>
-        </label>
-
-        {mode === "slot" ? (
+      <article className="surface-card p-5">
+        <form className="grid gap-3" onSubmit={handleSubmit}>
           <label className="text-sm font-medium text-slate-700">
-            Chọn slot
+            Chọn bác sĩ
             <select
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              value={slotId}
-              onChange={(event) => setSlotId(event.target.value)}
+              className="input-base mt-1"
+              onChange={(event) => {
+                setSelectedDoctorId(event.target.value);
+                setSlotId("");
+              }}
+              value={selectedDoctorId}
             >
-              <option value="">-- Chọn khung giờ --</option>
-              {(doctorDetail?.availableSlots || []).map((slot) => (
-                <option key={slot.id} value={slot.id}>
-                  {formatDateTime(slot.startAt)} - {formatDateTime(slot.endAt)}
+              <option value="">-- Chọn bác sĩ --</option>
+              {doctors.map((doctor) => (
+                <option key={doctor.doctorId} value={doctor.doctorId}>
+                  {doctor.fullName} - {doctor.specialty} ({doctor.location})
                 </option>
               ))}
             </select>
           </label>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+
+          <label className="text-sm font-medium text-slate-700">
+            Chế độ đặt lịch
+            <select className="input-base mt-1" onChange={(event) => setMode(event.target.value)} value={mode}>
+              <option value="slot">Chọn slot có sẵn</option>
+              <option value="proposal">Đề xuất giờ</option>
+            </select>
+          </label>
+
+          {mode === "slot" ? (
             <label className="text-sm font-medium text-slate-700">
-              Giờ bắt đầu đề xuất
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                type="datetime-local"
-                value={proposedStartAt}
-                onChange={(event) => setProposedStartAt(event.target.value)}
-              />
+              Chọn slot
+              <select className="input-base mt-1" onChange={(event) => setSlotId(event.target.value)} value={slotId}>
+                <option value="">-- Chọn khung giờ --</option>
+                {(doctorDetail?.availableSlots || []).map((slot) => (
+                  <option key={slot.id} value={slot.id}>
+                    {formatDateTime(slot.startAt)} - {formatDateTime(slot.endAt)}
+                  </option>
+                ))}
+              </select>
             </label>
-            <label className="text-sm font-medium text-slate-700">
-              Giờ kết thúc đề xuất
-              <input
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                type="datetime-local"
-                value={proposedEndAt}
-                onChange={(event) => setProposedEndAt(event.target.value)}
-              />
-            </label>
-          </div>
-        )}
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Giờ bắt đầu đề xuất
+                <input
+                  className="input-base mt-1"
+                  onChange={(event) => setProposedStartAt(event.target.value)}
+                  type="datetime-local"
+                  value={proposedStartAt}
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Giờ kết thúc đề xuất
+                <input
+                  className="input-base mt-1"
+                  onChange={(event) => setProposedEndAt(event.target.value)}
+                  type="datetime-local"
+                  value={proposedEndAt}
+                />
+              </label>
+            </div>
+          )}
 
-        <label className="text-sm font-medium text-slate-700">
-          Lý do khám
-          <textarea
-            className="mt-1 min-h-[96px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder="Mô tả triệu chứng hoặc nhu cầu tư vấn"
-          />
-        </label>
+          <label className="text-sm font-medium text-slate-700">
+            Lý do khám
+            <textarea
+              className="input-base mt-1 min-h-[96px]"
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Mô tả triệu chứng hoặc nhu cầu tư vấn"
+              value={reason}
+            />
+          </label>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-        <button className="app-link" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Đang xử lý..." : rescheduleOf ? "Xác nhận đổi lịch" : "Tạo lịch hẹn"}
-        </button>
-      </form>
-    </article>
+          <button className="btn-primary w-fit px-4 py-2 text-sm" disabled={isSubmitting} type="submit">
+            {isSubmitting ? "Đang xử lý..." : rescheduleOf ? "Xác nhận đổi lịch" : "Tạo lịch hẹn"}
+          </button>
+        </form>
+      </article>
+    </section>
   );
 }

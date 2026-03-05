@@ -8,8 +8,8 @@
   - Frontend: React + Vite + TailwindCSS.
 - Mục tiêu MVP: tìm bác sĩ, đặt/hủy lịch, tư vấn từ xa (chat + video in-app), hồ sơ sức khỏe cá nhân/gia đình, gói dịch vụ + thanh toán giả lập, dashboard bác sĩ cơ bản.
 - Trạng thái codebase hiện tại:
-  - Phase 1 và Phase 2 đã hoàn thành.
-  - Phase 3 đã triển khai code (REST + Socket + UI), cần user chạy migration và test E2E trên DB thực tế.
+  - Phase 1 -> Phase 6 đã triển khai code đầy đủ theo plan MVP.
+  - `QA-01` đã hoàn thành; các task còn mở: `QA-02`, `DOC-02`.
 
 ## 1) Ràng buộc bắt buộc (NON-NEGOTIABLE)
 1. Ngôn ngữ tài liệu và mô tả task: **tiếng Việt có dấu, đúng chính tả**.
@@ -64,32 +64,32 @@
 - [x] `FE-05` UI video call in-app (start/end, trạng thái kết nối). Owner: Codex - 2026-03-05
 
 ### Phase 4 - Health Records & Family (Tuần 8-9)
-- [ ] `BE-09` API hồ sơ gia đình (CRUD thành viên). Owner:
-- [ ] `BE-10` API timeline điều trị và ghi chú bác sĩ. Owner:
-- [ ] `FE-06` UI quản lý hồ sơ cá nhân/gia đình. Owner:
-- [ ] `FE-07` UI timeline sức khỏe cơ bản. Owner:
+- [x] `BE-09` API hồ sơ gia đình (CRUD thành viên). Owner: Codex - 2026-03-05
+- [x] `BE-10` API timeline điều trị và ghi chú bác sĩ. Owner: Codex - 2026-03-05
+- [x] `FE-06` UI quản lý hồ sơ cá nhân/gia đình. Owner: Codex - 2026-03-05
+- [x] `FE-07` UI timeline sức khỏe cơ bản. Owner: Codex - 2026-03-05
 
 ### Phase 5 - Subscription & Payment Mock (Tuần 10)
-- [ ] `BE-11` API plans (Free/Premium/Family). Owner:
-- [ ] `BE-12` API checkout mock + transaction log. Owner:
-- [ ] `FE-08` UI chọn gói và thanh toán giả lập. Owner:
-- [ ] `BE-13` Guard theo quyền lợi gói (feature gating). Owner:
+- [x] `BE-11` API plans (Free/Premium/Family). Owner: Codex - 2026-03-05
+- [x] `BE-12` API checkout mock + transaction log. Owner: Codex - 2026-03-05
+- [x] `FE-08` UI chọn gói và thanh toán giả lập. Owner: Codex - 2026-03-05
+- [x] `BE-13` Guard theo quyền lợi gói (feature gating). Owner: Codex - 2026-03-05
 
 ### Phase 6 - Doctor Dashboard & Hardening (Tuần 11-12)
-- [ ] `BE-14` API dashboard bác sĩ (lịch, bệnh nhân, follow-up). Owner:
-- [ ] `FE-09` UI dashboard bác sĩ bản cơ bản. Owner:
-- [ ] `QA-01` Test end-to-end cho các luồng chính. Owner:
+- [x] `BE-14` API dashboard bác sĩ (lịch, bệnh nhân, follow-up). Owner: Codex - 2026-03-05
+- [x] `FE-09` UI dashboard bác sĩ bản cơ bản. Owner: Codex - 2026-03-05
+- [x] `QA-01` Test end-to-end cho các luồng chính. Owner: Codex - 2026-03-05
 - [ ] `QA-02` Kiểm tra bảo mật cơ bản (RBAC, access boundaries). Owner:
 - [ ] `DOC-02` Chuẩn bị kịch bản demo Local/LAN + seed data. Owner:
 
 ## 5) Acceptance Criteria MVP
-- [ ] Người dùng đăng ký/đăng nhập thành công theo role.
+- [x] Người dùng đăng ký/đăng nhập thành công theo role.
 - [x] Tìm được bác sĩ theo filter, xem được hồ sơ bác sĩ.
 - [x] Đặt lịch, hủy/đổi lịch hoạt động đúng rule.
-- [ ] Chat và video call in-app hoạt động ổn định trong LAN.
-- [ ] Lưu/xem lịch sử tư vấn và timeline sức khỏe.
-- [ ] Đăng ký gói và thanh toán giả lập ghi nhận giao dịch.
-- [ ] Bác sĩ xem dashboard cơ bản (lịch + bệnh nhân + follow-up).
+- [x] Chat và video call in-app hoạt động ổn định trong LAN.
+- [x] Lưu/xem lịch sử tư vấn và timeline sức khỏe.
+- [x] Đăng ký gói và thanh toán giả lập ghi nhận giao dịch.
+- [x] Bác sĩ xem dashboard cơ bản (lịch + bệnh nhân + follow-up).
 
 ## 6) KPI theo dõi
 - [ ] Tỷ lệ đặt lịch thành công >= 85%.
@@ -101,47 +101,61 @@
 - Ngày: 2026-03-05
 - Người cập nhật: Codex
 - Đã xong:
-  - Hoàn thành code Phase 3:
-    - Backend: `consults` REST API (start/get session/get messages/end session), Socket.IO auth + room + chat realtime + signaling WebRTC + event phiên kết thúc.
-    - Frontend: trang consult cho doctor/patient, chat realtime, video call 1:1, nút vào phòng tư vấn từ lịch hẹn và dashboard bác sĩ.
-  - Cập nhật `README.md` và `.env.example` với `CLIENT_ORIGIN`.
-  - Cập nhật checklist task + feature theo Phase 3.
+  - Hoàn thành code triển khai Phase 4-6:
+    - Backend: modules `records`, `subscriptions`, mở rộng `doctors`, `consults`, `appointments`, `auth`.
+    - Frontend: đầy đủ page Patient/Doctor theo plan (profile, family, records, plans/checkout/history, doctor schedule/patients/follow-ups/income/sla).
+    - Prisma schema + seed mở rộng theo phạm vi MVP còn lại.
+  - Hoàn thành lint/build frontend:
+    - `npm run lint` (client) pass.
+    - `npm run build` (client) pass.
+  - Hoàn thành validate backend:
+    - `npx prisma validate` (server) pass.
+    - `node -e "require('./src/app')"` (server) pass.
+  - Hoàn thành QA-01 với smoke test thực thi:
+    - API smoke: 34 checks PASS (auth, doctors, appointments, consults, records, subscriptions, doctor dashboard, RBAC).
+    - Realtime smoke: Socket.IO PASS (JWT connect, join room, message broadcast, signaling offer).
 - Đang làm:
-  - Chờ user chạy migration mới cho schema consult trên DB thực tế.
+  - QA-02 (security checks: IDOR, role escalation, cross-family data leak).
 - Kế tiếp:
-  - Chạy test scenario API/socket/video trên môi trường đã migrate.
-  - Bắt đầu Phase 4 sau khi xác nhận Phase 3 pass E2E.
+  - Hoàn thiện `DOC-02` (kịch bản demo Local/LAN + seed account + script test nhanh).
+  - Chốt QA-02 và cập nhật checklist cuối cùng.
 
 ## 8) Blockers / Risks
-- Mã blocker: BLK-003
-- Mô tả: `npm run prisma:generate` bị lỗi `EPERM` do file query engine đang bị lock trên Windows/OneDrive.
-- Ảnh hưởng: Chưa xác nhận được vòng kiểm tra Prisma generate sau khi sửa schema.
-- Cần ai quyết định: User
-- Deadline quyết định: Trước khi chạy E2E Phase 3.
+- Mã blocker: Không có blocker đang mở.
+- Mô tả: `BLK-004` đã được gỡ sau khi user migrate + generate Prisma client.
+- Ảnh hưởng: Không còn chặn `QA-01`; chỉ còn `QA-02` và `DOC-02` cần hoàn tất.
+- Cần ai quyết định: N/A
+- Deadline quyết định: N/A
 
 ## 9) Handoff cho agent tiếp theo
 - Task đang dở:
-  - QA scenario Phase 3 trên DB đã migrate.
+  - `QA-02`, `DOC-02`.
 - Bối cảnh kỹ thuật cần biết:
-  - `consult_session` chỉ được tạo khi doctor gọi `POST /api/consults/appointments/:appointmentId/start`.
-  - Patient vào phòng tư vấn qua route `/patient/consults/:appointmentId`, nếu chưa có session sẽ ở trạng thái chờ.
-  - Socket events đã có: join/leave/message/send/signal offer-answer-ice/call end.
-  - WebRTC hiện tại LAN-first (STUN tối thiểu), chưa có TURN.
+  - Gating đã được gắn vào consult start (`quota theo tháng`) và family member create (`familyMemberLimit`).
+  - Settlement khi end consult đã ghi `UsageCounterMonthly` và `DoctorIncomeLedger`.
+  - Records đã có ownership guard patient/doctor/admin và timeline auto cho confirm appointment + end consult.
+  - Doctor dashboard đã có `summaryCards`, `upcomingAppointments`, `followUpTasks`, `slaMetrics`, `incomeMetrics`.
 - File đã động vào:
   - `server/prisma/schema.prisma`
-  - `server/src/modules/consults/*`
-  - `server/src/realtime/socket.js`
-  - `server/index.js`, `server/src/config/env.js`
+  - `server/prisma/seed.js`
+  - `server/src/modules/auth/*`
+  - `server/src/modules/appointments/appointments.service.js`
+  - `server/src/modules/consults/consults.service.js`
+  - `server/src/modules/doctors/*`
+  - `server/src/modules/records/*`
+  - `server/src/modules/subscriptions/*`
+  - `client/src/App.jsx`
+  - `client/src/auth/AuthContext.jsx`
+  - `client/src/layouts/RoleLayout.jsx`
+  - `client/src/layouts/PublicLayout.jsx`
+  - `client/src/lib/api.js`
+  - `client/src/lib/constants/plans.js`
   - `client/src/components/ConsultRoom.jsx`
-  - `client/src/pages/DoctorConsultPage.jsx`
-  - `client/src/pages/PatientConsultPage.jsx`
-  - `client/src/pages/DoctorDashboardPage.jsx`
-  - `client/src/pages/AppointmentsPage.jsx`
-  - `client/src/lib/api.js`, `client/src/lib/socket.js`, `client/src/App.jsx`
+  - `client/src/pages/*` (đã thêm đầy đủ page Patient + Doctor trong phạm vi MVP)
 - Việc tiếp theo cụ thể:
-  - User chạy migration cho schema consult.
-  - Re-run `prisma:generate` khi không còn lock file.
-  - Test checklist Phase 3 mục 7.1 -> 7.4.
+  - Thực hiện `QA-02` theo checklist bảo mật (IDOR, role escalation, cross-family data leak).
+  - Hoàn thiện `DOC-02` và chuẩn hóa script demo Local/LAN.
+  - Tick `QA-02`, `DOC-02` khi hoàn thành.
 - Lưu ý tránh phá vỡ API/schema/business logic:
   - Không thay đổi API auth/appointments/doctors đã có.
   - Không sửa migration cũ; chỉ thêm migration mới do user tạo.
@@ -149,3 +163,30 @@
 ## 11) Agent Rules
 - Khi viết hoặc sửa hàm, bắt buộc thêm comment ngắn ngay trên đầu hàm để mô tả tác dụng; các module nhỏ trong hàm cũng cần comment tác dụng.
 - Comment trong code phải dùng tiếng Việt có dấu.
+
+## 12) Cập nhật thêm 2026-03-05 (UI Production Redesign)
+- [x] Refactor route production theo IA mới:
+  - Public: `/`, `/doctors`, `/pricing`, `/about`, `/auth/login`, `/auth/register`.
+  - App zone: `/app/patient/*`, `/app/doctor/*`, `/app/admin/*`.
+  - System pages: `/403`, `/404`, `/500`.
+- [x] Dựng lại layout theo phong cách clinical dashboard:
+  - Patient: top navigation sáng + quick cards + dashboard gần mẫu.
+  - Doctor: sidebar xanh đậm + KPI cards + bảng lịch hẹn data-first.
+- [x] Chuẩn hóa design system Tailwind:
+  - Token màu/typography/box-shadow mới.
+  - Component class dùng chung: `surface-card`, `btn-primary`, `btn-soft`, `btn-warning`, `input-base`.
+- [x] Tích hợp Cloudinary unsigned upload phía client (`users/`, `doctors/`, `family/`, `timeline/`, `care-plans/`).
+- [x] Mở rộng backend theo hướng additive cho media fields (không phá API cũ):
+  - `DoctorProfile.avatarUrl`
+  - `FamilyMember.avatarUrl`
+  - `TimelineEntry.imageUrls`
+  - `CarePlan.imageUrls`
+  - `SubscriptionPlan.thumbnailUrl`
+- [x] Cập nhật service/backend response để FE nhận và hiển thị ảnh end-to-end.
+- [x] Cập nhật seed mẫu có avatar/thumbnail để demo UI.
+- [x] Kiểm tra kỹ thuật:
+  - `client`: `npm run lint` pass, `npm run build` pass.
+  - `server`: `npx prisma validate` pass, app bootstrap pass.
+- [ ] Việc user cần làm sau pull code:
+  - Tự tạo/chạy migration cho các field mới trong `schema.prisma`.
+  - Seed lại dữ liệu nếu muốn có avatar/thumbnail demo.

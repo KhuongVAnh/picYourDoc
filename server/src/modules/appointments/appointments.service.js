@@ -2,6 +2,7 @@ const { prisma } = require("../../lib/prisma");
 const { parsePagination, buildMeta } = require("../../lib/pagination");
 const { env } = require("../../config/env");
 const { scheduleReminderLogsForAppointment } = require("../reminders/reminder.service");
+const recordsService = require("../records/records.service");
 const { ACTIVE_APPOINTMENT_STATUSES } = require("./appointments.constants");
 const APPOINTMENT_STATUS_SET = new Set([
   "REQUESTED",
@@ -371,6 +372,8 @@ async function confirmAppointment({ appointmentId, user }) {
 
   // Lên lịch reminder sau khi xác nhận thành công.
   await scheduleReminderLogsForAppointment(updated);
+  // Tạo timeline tự động cho thành viên primary nếu bệnh nhân đã có hồ sơ gia đình.
+  await recordsService.createTimelineEntryForAppointmentConfirmed(updated.id);
 
   return updated;
 }

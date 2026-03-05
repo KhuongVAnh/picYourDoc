@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { getDoctorDetailApi } from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime } from "../lib/date";
+import { ROUTES } from "../lib/routes";
 
-// Trang chi tiết bác sĩ (private), hiển thị profile và slot khả dụng 7 ngày tới.
+// Tạo fallback avatar để hiển thị khi bác sĩ chưa có ảnh chân dung.
+function buildDoctorFallbackAvatar(fullName) {
+  const encodedName = encodeURIComponent(fullName || "Doctor");
+  return `https://ui-avatars.com/api/?name=${encodedName}&background=0F4C81&color=FFFFFF`;
+}
+
+// Trang chi tiết bác sĩ private, hiển thị profile và slot còn trống.
 export function DoctorDetailPage() {
   const { doctorId } = useParams();
   const navigate = useNavigate();
@@ -13,7 +20,7 @@ export function DoctorDetailPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Tải chi tiết bác sĩ; nếu token không hợp lệ thì chuyển về login.
+  // Tải chi tiết bác sĩ; nếu token không hợp lệ thì chuyển về trang đăng nhập.
   useEffect(() => {
     let ignore = false;
 
@@ -32,7 +39,7 @@ export function DoctorDetailPage() {
       } catch (apiError) {
         if (!ignore) {
           if (apiError.status === 401) {
-            navigate("/login", { replace: true });
+            navigate(ROUTES.public.login, { replace: true });
             return;
           }
           setError(apiError.message || "Không thể tải hồ sơ bác sĩ");
@@ -51,67 +58,76 @@ export function DoctorDetailPage() {
   }, [doctorId, accessToken, isAuthenticated, navigate]);
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate replace to={ROUTES.public.login} />;
   }
 
   return (
-    <article className="panel space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
+    <section className="space-y-4">
+      <header className="surface-card flex flex-wrap items-center justify-between gap-2 p-4">
         <h2 className="text-xl font-semibold text-slate-900">Chi tiết bác sĩ</h2>
-        <Link className="app-link" to="/patient/doctors">
+        <Link className="btn-soft px-4 py-2 text-sm" to={ROUTES.app.patient.doctors}>
           Quay lại danh sách
         </Link>
       </header>
 
-      {isLoading ? <p className="meta-text">Đang tải hồ sơ bác sĩ...</p> : null}
+      {isLoading ? <p className="text-sm text-slate-600">Đang tải hồ sơ bác sĩ...</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {doctor ? (
         <>
-          <section className="rounded-xl border border-slate-200 p-4">
-            <h3 className="text-lg font-semibold text-slate-900">{doctor.fullName}</h3>
-            <p className="text-sm text-slate-700">
-              {doctor.specialty} - {doctor.location}
-            </p>
-            <p className="text-sm text-slate-700">
-              Phí khám: {doctor.consultationFee.toLocaleString("vi-VN")}đ
-            </p>
-            <p className="text-sm text-slate-700">
-              Kinh nghiệm: {doctor.yearsExperience} năm
-            </p>
-            <p className="text-sm text-slate-700">
-              Rating: {doctor.ratingAvg} ({doctor.reviewCount} đánh giá)
-            </p>
-            <p className="text-sm text-slate-700">Bảo hiểm: {doctor.insurancesAccepted.join(", ")}</p>
-            <p className="mt-2 text-sm text-slate-700">{doctor.bio}</p>
-          </section>
+          <article className="surface-card p-5">
+            <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+              <img
+                alt={doctor.fullName}
+                className="h-52 w-full rounded-2xl object-cover"
+                src={doctor.avatarUrl || buildDoctorFallbackAvatar(doctor.fullName)}
+              />
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-slate-900">{doctor.fullName}</h3>
+                <p className="text-sm text-slate-600">
+                  {doctor.specialty} • {doctor.location}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Phí khám: <span className="font-semibold text-slate-800">{doctor.consultationFee.toLocaleString("vi-VN")}đ</span>
+                </p>
+                <p className="text-sm text-slate-600">
+                  Kinh nghiệm: {doctor.yearsExperience} năm • Rating: {doctor.ratingAvg} ({doctor.reviewCount} đánh giá)
+                </p>
+                <p className="text-sm text-slate-600">
+                  Bảo hiểm: {(doctor.insurancesAccepted || []).join(", ") || "-"}
+                </p>
+                <p className="pt-1 text-sm text-slate-700">{doctor.bio}</p>
+              </div>
+            </div>
+          </article>
 
-          <section className="rounded-xl border border-brand-100 bg-brand-50 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-semibold text-brand-700">Khung giờ khả dụng</h3>
+          <article className="surface-card p-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-semibold text-slate-900">Khung giờ khả dụng (7 ngày)</h3>
               <Link
-                className="app-link"
-                to={`/patient/appointments/new?doctorId=${doctor.doctorId}`}
+                className="btn-primary px-4 py-2 text-sm"
+                to={`${ROUTES.app.patient.appointmentNew}?doctorId=${doctor.doctorId}`}
               >
                 Đặt lịch ngay
               </Link>
             </div>
+
             {doctor.availableSlots?.length ? (
-              <ul className="space-y-2">
+              <div className="grid gap-2 md:grid-cols-2">
                 {doctor.availableSlots.map((slot) => (
-                  <li key={slot.id} className="rounded-lg border border-brand-100 bg-white p-3">
-                    <p className="text-sm text-slate-800">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3" key={slot.id}>
+                    <p className="text-sm text-slate-700">
                       {formatDateTime(slot.startAt)} - {formatDateTime(slot.endAt)}
                     </p>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             ) : (
-              <p className="text-sm text-slate-700">Hiện chưa có slot trống trong 7 ngày tới.</p>
+              <p className="text-sm text-slate-600">Hiện chưa có slot trống trong 7 ngày tới.</p>
             )}
-          </section>
+          </article>
         </>
       ) : null}
-    </article>
+    </section>
   );
 }

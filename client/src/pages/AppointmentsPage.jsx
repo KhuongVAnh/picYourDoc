@@ -1,8 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cancelAppointmentApi, getAppointmentsApi } from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime, getHoursUntil } from "../lib/date";
+import { ROUTES } from "../lib/routes";
+
+// Trả class badge trạng thái lịch hẹn để UI dễ đọc theo mức ưu tiên.
+function getStatusBadgeClass(status) {
+  if (status === "CONFIRMED") {
+    return "bg-emerald-100 text-emerald-700";
+  }
+  if (status === "REQUESTED") {
+    return "bg-amber-100 text-amber-700";
+  }
+  if (status === "COMPLETED") {
+    return "bg-sky-100 text-sky-700";
+  }
+  if (status === "CANCELLED" || status === "REJECTED") {
+    return "bg-rose-100 text-rose-700";
+  }
+  return "bg-slate-100 text-slate-700";
+}
 
 // Trang lịch hẹn của bệnh nhân, hỗ trợ hủy/đổi lịch và vào phòng tư vấn online.
 export function AppointmentsPage() {
@@ -86,27 +104,27 @@ export function AppointmentsPage() {
       doctorId: appointment.doctorId,
       rescheduleOf: appointment.id,
     });
-    navigate(`/patient/appointments/new?${search.toString()}`);
+    navigate(`${ROUTES.app.patient.appointmentNew}?${search.toString()}`);
   }
 
   return (
-    <article className="panel space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
+    <section className="space-y-4">
+      <header className="surface-card flex flex-wrap items-center justify-between gap-2 p-4">
         <h2 className="text-xl font-semibold text-slate-900">Lịch hẹn của tôi</h2>
-        <Link className="app-link" to="/patient/appointments/new">
+        <Link className="btn-primary px-4 py-2 text-sm" to={ROUTES.app.patient.appointmentNew}>
           Tạo lịch hẹn mới
         </Link>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <article className="surface-card flex flex-wrap items-center gap-2 p-4">
         <label className="text-sm font-medium text-slate-700" htmlFor="statusFilter">
           Trạng thái:
         </label>
         <select
+          className="input-base w-[220px]"
           id="statusFilter"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          value={status}
           onChange={(event) => setStatus(event.target.value)}
+          value={status}
         >
           <option value="">Tất cả</option>
           <option value="REQUESTED">REQUESTED</option>
@@ -116,28 +134,29 @@ export function AppointmentsPage() {
           <option value="RESCHEDULED">RESCHEDULED</option>
           <option value="COMPLETED">COMPLETED</option>
         </select>
-      </div>
+      </article>
 
-      {isLoading ? <p className="meta-text">Đang tải lịch hẹn...</p> : null}
+      {isLoading ? <p className="text-sm text-slate-600">Đang tải lịch hẹn...</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {!isLoading && enrichedAppointments.length === 0 ? (
-        <p className="meta-text">Chưa có lịch hẹn nào.</p>
+        <article className="surface-card p-5">
+          <p className="text-sm text-slate-500">Chưa có lịch hẹn nào.</p>
+        </article>
       ) : null}
 
       <div className="grid gap-3">
         {enrichedAppointments.map((appointment) => (
-          <div key={appointment.id} className="rounded-xl border border-slate-200 p-4">
+          <article className="surface-card p-4" key={appointment.id}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="font-semibold text-slate-900">{appointment.doctor?.fullName}</p>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <p className="font-semibold text-slate-900">{appointment.doctor?.fullName || "Bác sĩ"}</p>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusBadgeClass(appointment.status)}`}>
                 {appointment.status}
               </span>
             </div>
 
             <p className="text-sm text-slate-700">
-              Thời gian: {formatDateTime(appointment.startAt)} -{" "}
-              {formatDateTime(appointment.endAt)}
+              Thời gian: {formatDateTime(appointment.startAt)} - {formatDateTime(appointment.endAt)}
             </p>
             <p className="text-sm text-slate-700">
               Nguồn tạo lịch: {appointment.sourceType}
@@ -147,37 +166,36 @@ export function AppointmentsPage() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               <button
-                className="app-link"
-                type="button"
+                className="btn-soft px-3 py-2 text-sm"
                 disabled={!appointment.canPatientUpdate}
                 onClick={() => handleCancelAppointment(appointment.id)}
+                type="button"
               >
                 Hủy lịch
               </button>
               <button
-                className="app-link"
-                type="button"
+                className="btn-soft px-3 py-2 text-sm"
                 disabled={!appointment.canPatientUpdate}
                 onClick={() => handleGoReschedule(appointment)}
+                type="button"
               >
                 Đổi lịch
               </button>
               {appointment.status === "CONFIRMED" ? (
-                <Link className="app-link" to={`/patient/consults/${appointment.id}`}>
+                <Link className="btn-primary px-3 py-2 text-sm" to={ROUTES.app.patient.consult(appointment.id)}>
                   Vào phòng tư vấn
                 </Link>
               ) : null}
             </div>
 
-            {!appointment.canPatientUpdate &&
-            ["REQUESTED", "CONFIRMED"].includes(appointment.status) ? (
+            {!appointment.canPatientUpdate && ["REQUESTED", "CONFIRMED"].includes(appointment.status) ? (
               <p className="mt-2 text-xs text-red-600">
                 Bạn chỉ được hủy/đổi lịch khi còn hơn 6 giờ trước thời gian hẹn.
               </p>
             ) : null}
-          </div>
+          </article>
         ))}
       </div>
-    </article>
+    </section>
   );
 }

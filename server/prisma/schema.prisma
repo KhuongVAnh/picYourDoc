@@ -48,19 +48,82 @@ enum ConsultMessageType {
   SYSTEM
 }
 
+enum RelationType {
+  SELF
+  SPOUSE
+  CHILD
+  PARENT
+  SIBLING
+  OTHER
+}
+
+enum GenderType {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum RecordEntryType {
+  VISIT
+  NOTE
+  PRESCRIPTION
+  LAB_RESULT
+  FOLLOW_UP
+}
+
+enum CarePlanStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+enum PlanCode {
+  FREE
+  PREMIUM
+  FAMILY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum MockPaymentResult {
+  SUCCESS
+  FAILED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
   passwordHash String   @map("password_hash")
   role         Role     @default(patient)
+  displayName  String?  @map("display_name")
+  phone        String?
+  avatarUrl    String?  @map("avatar_url")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  doctorProfile       DoctorProfile?
-  patientAppointments Appointment[]     @relation("PatientAppointments")
-  notifications       InAppNotification[]
-  startedConsultSessions ConsultSession[] @relation("StartedConsultSessions")
-  sentConsultMessages ConsultMessage[]   @relation("SentConsultMessages")
+  doctorProfile          DoctorProfile?
+  patientAppointments    Appointment[]       @relation("PatientAppointments")
+  notifications          InAppNotification[]
+  startedConsultSessions ConsultSession[]    @relation("StartedConsultSessions")
+  sentConsultMessages    ConsultMessage[]    @relation("SentConsultMessages")
+  ownedFamilyProfile     FamilyProfile?      @relation("OwnedFamilyProfiles")
+  updatedHealthProfiles  HealthProfile[]     @relation("UpdatedHealthProfiles")
+  doctorTimelineEntries  TimelineEntry[]     @relation("DoctorTimelineEntries")
+  doctorCarePlans        CarePlan[]          @relation("DoctorCarePlans")
+  subscriptions          UserSubscription[]
+  paymentTransactions    PaymentTransaction[]
+  doctorIncomeLedgers    DoctorIncomeLedger[] @relation("DoctorIncomeAsDoctor")
+  patientIncomeLedgers   DoctorIncomeLedger[] @relation("DoctorIncomeAsPatient")
 
   @@map("users")
 }
@@ -68,6 +131,7 @@ model User {
 model DoctorProfile {
   id                 String    @id @default(cuid())
   userId             String    @unique @map("user_id")
+  avatarUrl          String?   @map("avatar_url")
   fullName           String    @map("full_name")
   specialty          String
   location           String
@@ -81,9 +145,10 @@ model DoctorProfile {
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  slots        DoctorSlot[]
-  appointments Appointment[] @relation("DoctorAppointments")
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots                 DoctorSlot[]
+  appointments          Appointment[]      @relation("DoctorAppointments")
+  assignedSubscriptions UserSubscription[] @relation("AssignedDoctorSubscriptions")
 
   @@map("doctor_profiles")
 }
@@ -123,11 +188,12 @@ model Appointment {
   createdAt        DateTime              @default(now()) @map("created_at")
   updatedAt        DateTime              @updatedAt @map("updated_at")
 
-  patient      User          @relation("PatientAppointments", fields: [patientUserId], references: [id], onDelete: Cascade)
-  doctor       DoctorProfile @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
-  slot         DoctorSlot?   @relation(fields: [slotId], references: [id], onDelete: SetNull)
-  reminderLogs ReminderLog[]
+  patient       User           @relation("PatientAppointments", fields: [patientUserId], references: [id], onDelete: Cascade)
+  doctor        DoctorProfile  @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  slot          DoctorSlot?    @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  reminderLogs  ReminderLog[]
   consultSession ConsultSession?
+  timelineEntries TimelineEntry[]
 
   @@index([doctorId, status, startAt, endAt], map: "appointments_doctor_status_time_idx")
   @@index([patientUserId, status, startAt], map: "appointments_patient_status_time_idx")
@@ -135,18 +201,22 @@ model Appointment {
 }
 
 model ConsultSession {
-  id              String              @id @default(cuid())
-  appointmentId   String              @unique @map("appointment_id")
+  id              String               @id @default(cuid())
+  appointmentId   String               @unique @map("appointment_id")
   status          ConsultSessionStatus @default(ACTIVE)
-  startedByUserId String              @map("started_by_user_id")
-  startedAt       DateTime            @default(now()) @map("started_at")
-  endedAt         DateTime?           @map("ended_at")
-  createdAt       DateTime            @default(now()) @map("created_at")
-  updatedAt       DateTime            @updatedAt @map("updated_at")
+  startedByUserId String               @map("started_by_user_id")
+  startedAt       DateTime             @default(now()) @map("started_at")
+  endedAt         DateTime?            @map("ended_at")
+  completedAt     DateTime?            @map("completed_at")
+  incomeSettledAt DateTime?            @map("income_settled_at")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
 
-  appointment Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  startedBy   User           @relation("StartedConsultSessions", fields: [startedByUserId], references: [id], onDelete: Cascade)
-  messages    ConsultMessage[]
+  appointment    Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  startedBy      User               @relation("StartedConsultSessions", fields: [startedByUserId], references: [id], onDelete: Cascade)
+  messages       ConsultMessage[]
+  timelineEntries TimelineEntry[]
+  incomeLedger   DoctorIncomeLedger?
 
   @@index([status, startedAt], map: "consult_sessions_status_started_idx")
   @@map("consult_sessions")
@@ -167,14 +237,203 @@ model ConsultMessage {
   @@map("consult_messages")
 }
 
+model FamilyProfile {
+  id          String   @id @default(cuid())
+  ownerUserId String   @unique @map("owner_user_id")
+  name        String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner   User         @relation("OwnedFamilyProfiles", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  members FamilyMember[]
+
+  @@map("family_profiles")
+}
+
+model FamilyMember {
+  id              String       @id @default(cuid())
+  familyProfileId String       @map("family_profile_id")
+  fullName        String       @map("full_name")
+  avatarUrl       String?      @map("avatar_url")
+  relation        RelationType
+  gender          GenderType
+  dateOfBirth     DateTime?    @map("date_of_birth")
+  isPrimary       Boolean      @default(false) @map("is_primary")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  familyProfile  FamilyProfile  @relation(fields: [familyProfileId], references: [id], onDelete: Cascade)
+  healthProfile  HealthProfile?
+  timelineEntries TimelineEntry[]
+  carePlans      CarePlan[]
+
+  @@index([familyProfileId], map: "family_members_family_profile_idx")
+  @@map("family_members")
+}
+
+model HealthProfile {
+  id                String   @id @default(cuid())
+  memberId          String   @unique @map("member_id")
+  allergies         Json
+  chronicConditions Json     @map("chronic_conditions")
+  medications       Json
+  lifestyle         Json
+  bloodType         String?  @map("blood_type")
+  emergencyContact  Json     @map("emergency_contact")
+  updatedByUserId   String   @map("updated_by_user_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  member    FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  updatedBy User         @relation("UpdatedHealthProfiles", fields: [updatedByUserId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+model TimelineEntry {
+  id              String          @id @default(cuid())
+  memberId        String          @map("member_id")
+  appointmentId   String?         @map("appointment_id")
+  consultSessionId String?        @map("consult_session_id")
+  doctorUserId    String?         @map("doctor_user_id")
+  entryType       RecordEntryType @map("entry_type")
+  title           String
+  summary         String
+  payload         Json
+  imageUrls       Json?           @map("image_urls")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  member        FamilyMember    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  appointment   Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  consultSession ConsultSession? @relation(fields: [consultSessionId], references: [id], onDelete: SetNull)
+  doctor        User?           @relation("DoctorTimelineEntries", fields: [doctorUserId], references: [id], onDelete: SetNull)
+
+  @@index([memberId, createdAt], map: "timeline_entries_member_created_idx")
+  @@index([doctorUserId, createdAt], map: "timeline_entries_doctor_created_idx")
+  @@map("timeline_entries")
+}
+
+model CarePlan {
+  id             String         @id @default(cuid())
+  memberId       String         @map("member_id")
+  doctorId       String         @map("doctor_id")
+  frequencyDays  Int            @map("frequency_days")
+  nextFollowUpAt DateTime?      @map("next_follow_up_at")
+  medicationPlan Json           @map("medication_plan")
+  lifestyleGoals Json           @map("lifestyle_goals")
+  imageUrls      Json?          @map("image_urls")
+  status         CarePlanStatus @default(ACTIVE)
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  member FamilyMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  doctor User         @relation("DoctorCarePlans", fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([memberId, status], map: "care_plans_member_status_idx")
+  @@map("care_plans")
+}
+
+model SubscriptionPlan {
+  id                 String   @id @default(cuid())
+  code               PlanCode @unique
+  name               String
+  thumbnailUrl       String?  @map("thumbnail_url")
+  monthlyPrice       Decimal  @map("monthly_price") @db.Decimal(10, 2)
+  consultSessionQuota Int     @map("consult_session_quota")
+  familyMemberLimit  Int      @map("family_member_limit")
+  slaMinutes         Int?     @map("sla_minutes")
+  isPriority         Boolean  @default(false) @map("is_priority")
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  userSubscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id                    String             @id @default(cuid())
+  userId                String             @map("user_id")
+  planId                String             @map("plan_id")
+  status                SubscriptionStatus @default(ACTIVE)
+  startedAt             DateTime           @map("started_at")
+  endsAt                DateTime           @map("ends_at")
+  autoRenew             Boolean            @default(true) @map("auto_renew")
+  assignedDoctorProfileId String?          @map("assigned_doctor_profile_id")
+  createdAt             DateTime           @default(now()) @map("created_at")
+  updatedAt             DateTime           @updatedAt @map("updated_at")
+
+  user                 User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan                 SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  assignedDoctorProfile DoctorProfile?   @relation("AssignedDoctorSubscriptions", fields: [assignedDoctorProfileId], references: [id], onDelete: SetNull)
+  transactions         PaymentTransaction[]
+  usageCounters        UsageCounterMonthly[]
+
+  @@index([userId, status], map: "user_subscriptions_user_status_idx")
+  @@map("user_subscriptions")
+}
+
+model PaymentTransaction {
+  id                 String           @id @default(cuid())
+  userId             String           @map("user_id")
+  userSubscriptionId String           @map("user_subscription_id")
+  amount             Decimal          @db.Decimal(10, 2)
+  currency           String           @default("VND")
+  paymentMethod      String           @map("payment_method")
+  mockResult         MockPaymentResult @map("mock_result")
+  status             TransactionStatus @default(PENDING)
+  failureReason      String?          @map("failure_reason")
+  referenceCode      String           @unique @map("reference_code")
+  createdAt          DateTime         @default(now()) @map("created_at")
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userSubscription UserSubscription @relation(fields: [userSubscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "payment_transactions_user_created_idx")
+  @@map("payment_transactions")
+}
+
+model UsageCounterMonthly {
+  id                 String   @id @default(cuid())
+  userSubscriptionId String   @map("user_subscription_id")
+  monthKey           String   @map("month_key")
+  consultSessionsUsed Int     @default(0) @map("consult_sessions_used")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  userSubscription UserSubscription @relation(fields: [userSubscriptionId], references: [id], onDelete: Cascade)
+
+  @@unique([userSubscriptionId, monthKey])
+  @@index([monthKey], map: "usage_counter_month_key_idx")
+  @@map("usage_counter_monthly")
+}
+
+model DoctorIncomeLedger {
+  id              String   @id @default(cuid())
+  doctorUserId    String   @map("doctor_user_id")
+  consultSessionId String  @unique @map("consult_session_id")
+  patientUserId   String   @map("patient_user_id")
+  planCode        PlanCode @map("plan_code")
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("VND")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  doctor        User          @relation("DoctorIncomeAsDoctor", fields: [doctorUserId], references: [id], onDelete: Cascade)
+  patient       User          @relation("DoctorIncomeAsPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  consultSession ConsultSession @relation(fields: [consultSessionId], references: [id], onDelete: Cascade)
+
+  @@index([doctorUserId, createdAt], map: "doctor_income_ledger_doctor_created_idx")
+  @@map("doctor_income_ledger")
+}
+
 model InAppNotification {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
   type      String
   title     String
   content   String
   readAt    DateTime? @map("read_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -183,14 +442,14 @@ model InAppNotification {
 }
 
 model ReminderLog {
-  id          String         @id @default(cuid())
-  appointmentId String       @map("appointment_id")
-  channel     ReminderChannel
-  scheduledFor DateTime      @map("scheduled_for")
-  sentAt      DateTime?      @map("sent_at")
-  status      ReminderStatus @default(PENDING)
-  errorMessage String?       @map("error_message")
-  createdAt   DateTime       @default(now()) @map("created_at")
+  id            String         @id @default(cuid())
+  appointmentId String         @map("appointment_id")
+  channel       ReminderChannel
+  scheduledFor  DateTime       @map("scheduled_for")
+  sentAt        DateTime?      @map("sent_at")
+  status        ReminderStatus @default(PENDING)
+  errorMessage  String?        @map("error_message")
+  createdAt     DateTime       @default(now()) @map("created_at")
 
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 

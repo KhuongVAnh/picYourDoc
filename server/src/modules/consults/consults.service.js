@@ -1,7 +1,9 @@
 const { prisma } = require("../../lib/prisma");
 const { parsePagination, buildMeta } = require("../../lib/pagination");
+const subscriptionsService = require("../subscriptions/subscriptions.service");
+const recordsService = require("../records/records.service");
 
-// Tạo lỗi HTTP chuẩn để đồng nhất xử lý ở controller/middleware.
+// Tạo lỗi HTTP chuẩn để đồng bộ xử lý ở controller/middleware.
 function createHttpError(message, statusCode) {
   const error = new Error(message);
   error.statusCode = statusCode;
@@ -17,6 +19,8 @@ function toConsultSessionDetail(session) {
     startedByUserId: session.startedByUserId,
     startedAt: session.startedAt,
     endedAt: session.endedAt,
+    completedAt: session.completedAt,
+    incomeSettledAt: session.incomeSettledAt,
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
     patientUserId: session.appointment.patientUserId,
@@ -180,6 +184,9 @@ async function startConsultSession({ appointmentId, user }) {
     throw createHttpError("Consult session already ended", 409);
   }
 
+  // Chặn mở phiên khi quota tư vấn của bệnh nhân đã hết.
+  await subscriptionsService.ensureConsultQuotaOrThrow(appointment.patientUserId, new Date());
+
   const created = await prisma.consultSession.create({
     data: {
       appointmentId,
@@ -256,7 +263,7 @@ async function getConsultMessages({ sessionId, user, query }) {
   };
 }
 
-// Doctor kết thúc phiên tư vấn đang ACTIVE.
+// Doctor kết thúc phiên tư vấn đang ACTIVE và settle usage/income.
 async function endConsultSession({ sessionId, user }) {
   if (user.role !== "doctor") {
     throw createHttpError("Only doctor can end consult session", 403);
@@ -269,11 +276,13 @@ async function endConsultSession({ sessionId, user }) {
     throw createHttpError("Consult session is not active", 409);
   }
 
+  const endedAt = new Date();
   const updated = await prisma.consultSession.update({
     where: { id: sessionId },
     data: {
       status: "ENDED",
-      endedAt: new Date(),
+      endedAt,
+      completedAt: endedAt,
     },
     include: {
       appointment: {
@@ -290,7 +299,16 @@ async function endConsultSession({ sessionId, user }) {
     },
   });
 
-  return toConsultSessionDetail(updated);
+  // Cộng usage theo tháng và ghi nhận thu nhập bác sĩ theo plan.
+  await subscriptionsService.settleConsultUsageAndIncome({
+    sessionId: updated.id,
+    settledAt: endedAt,
+  });
+  // Tạo timeline tự động cho thành viên primary của bệnh nhân.
+  await recordsService.createTimelineEntryForConsultCompleted(updated.id);
+
+  const refreshed = await getSessionById(updated.id);
+  return toConsultSessionDetail(refreshed);
 }
 
 // Xác thực thành viên socket có quyền join/gửi sự kiện trong phiên ACTIVE.

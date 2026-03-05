@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+﻿import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { getDoctorsApi } from "../lib/api";
+import { useAuth } from "../auth/useAuth";
+import { ROUTES } from "../lib/routes";
 
 const INITIAL_FILTERS = {
   q: "",
@@ -13,8 +15,35 @@ const INITIAL_FILTERS = {
   sortOrder: "desc",
 };
 
-// Trang danh sách bác sĩ có filter, sort, pagination và compare tối đa 3 bác sĩ.
+// Tạo fallback avatar theo tên để card bác sĩ luôn có hình đại diện.
+function buildDoctorFallbackAvatar(fullName) {
+  const encodedName = encodeURIComponent(fullName || "Doctor");
+  return `https://ui-avatars.com/api/?name=${encodedName}&background=0F4C81&color=FFFFFF`;
+}
+
+// Trả URL chi tiết bác sĩ theo ngữ cảnh public hay app zone.
+function buildDoctorDetailRoute({ pathname, doctorId, isAuthenticated, role }) {
+  if (pathname.startsWith("/app/patient")) {
+    return ROUTES.app.patient.doctorDetail(doctorId);
+  }
+
+  if (isAuthenticated && role === "patient") {
+    return ROUTES.app.patient.doctorDetail(doctorId);
+  }
+
+  if (isAuthenticated && role === "doctor") {
+    return ROUTES.app.doctor.overview;
+  }
+
+  return `${ROUTES.public.login}?redirect=${encodeURIComponent(
+    ROUTES.app.patient.doctorDetail(doctorId)
+  )}`;
+}
+
+// Trang danh sách bác sĩ có filter, pagination và compare tối đa 3 bác sĩ.
 export function DoctorsListPage() {
+  const location = useLocation();
+  const { isAuthenticated, role } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [result, setResult] = useState({ data: [], meta: null });
@@ -22,7 +51,7 @@ export function DoctorsListPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Đồng bộ form filter từ URL query khi trang load.
+  // Đồng bộ form filter từ URL query để giữ trạng thái khi share đường dẫn.
   useEffect(() => {
     setFilters({
       q: searchParams.get("q") || "",
@@ -36,7 +65,7 @@ export function DoctorsListPage() {
     });
   }, [searchParams]);
 
-  // Tải dữ liệu bác sĩ mỗi khi query thay đổi.
+  // Tải danh sách bác sĩ khi query thay đổi.
   useEffect(() => {
     let ignore = false;
 
@@ -77,19 +106,19 @@ export function DoctorsListPage() {
     };
   }, [searchParams]);
 
-  // Lấy danh sách bác sĩ đang được chọn để compare.
+  // Lấy danh sách bác sĩ được chọn để hiển thị bảng so sánh.
   const comparedDoctors = useMemo(() => {
     const idSet = new Set(selectedCompareIds);
     return result.data.filter((doctor) => idSet.has(doctor.doctorId));
   }, [result.data, selectedCompareIds]);
 
-  // Cập nhật giá trị filter trên form.
+  // Cập nhật filter trên form.
   function handleFilterChange(event) {
     const { name, value } = event.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+    setFilters((previous) => ({ ...previous, [name]: value }));
   }
 
-  // Áp dụng filter lên URL để trigger query mới.
+  // Áp dụng filter lên URL để trigger query mới từ backend.
   function handleApplyFilters(event) {
     event.preventDefault();
     const next = new URLSearchParams();
@@ -105,18 +134,18 @@ export function DoctorsListPage() {
 
   // Chọn hoặc bỏ chọn bác sĩ để compare, tối đa 3 người.
   function handleToggleCompare(doctorId) {
-    setSelectedCompareIds((prev) => {
-      if (prev.includes(doctorId)) {
-        return prev.filter((id) => id !== doctorId);
+    setSelectedCompareIds((previous) => {
+      if (previous.includes(doctorId)) {
+        return previous.filter((id) => id !== doctorId);
       }
-      if (prev.length >= 3) {
-        return prev;
+      if (previous.length >= 3) {
+        return previous;
       }
-      return [...prev, doctorId];
+      return [...previous, doctorId];
     });
   }
 
-  // Chuyển trang theo phân trang backend trả về.
+  // Chuyển trang theo phân trang backend.
   function handleChangePage(nextPage) {
     const current = new URLSearchParams(searchParams);
     current.set("page", String(nextPage));
@@ -124,131 +153,152 @@ export function DoctorsListPage() {
   }
 
   return (
-    <article className="panel space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-xl font-semibold text-slate-900">Tìm kiếm bác sĩ</h2>
-        <span className="meta-text">So sánh tối đa 3 bác sĩ</span>
-      </header>
+    <section className="space-y-4">
+      <article className="surface-card sticky top-[84px] z-20 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-semibold text-slate-900">Tìm bác sĩ phù hợp</h2>
+          <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+            So sánh tối đa 3 bác sĩ
+          </span>
+        </div>
 
-      <form className="grid gap-3 md:grid-cols-4" onSubmit={handleApplyFilters}>
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="q"
-          placeholder="Tên hoặc chuyên khoa"
-          value={filters.q}
-          onChange={handleFilterChange}
-        />
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="specialty"
-          placeholder="Chuyên khoa"
-          value={filters.specialty}
-          onChange={handleFilterChange}
-        />
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="location"
-          placeholder="Khu vực"
-          value={filters.location}
-          onChange={handleFilterChange}
-        />
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="insurance"
-          placeholder="Bảo hiểm"
-          value={filters.insurance}
-          onChange={handleFilterChange}
-        />
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="feeMin"
-          placeholder="Phí từ"
-          value={filters.feeMin}
-          onChange={handleFilterChange}
-        />
-        <input
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="feeMax"
-          placeholder="Phí đến"
-          value={filters.feeMax}
-          onChange={handleFilterChange}
-        />
-        <select
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="sortBy"
-          value={filters.sortBy}
-          onChange={handleFilterChange}
-        >
-          <option value="rating">Sắp xếp theo rating</option>
-          <option value="fee">Sắp xếp theo phí</option>
-        </select>
-        <select
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          name="sortOrder"
-          value={filters.sortOrder}
-          onChange={handleFilterChange}
-        >
-          <option value="desc">Giảm dần</option>
-          <option value="asc">Tăng dần</option>
-        </select>
-        <button className="app-link md:col-span-4" type="submit">
-          Áp dụng bộ lọc
-        </button>
-      </form>
+        <form className="grid gap-2 md:grid-cols-4" onSubmit={handleApplyFilters}>
+          <input
+            className="input-base"
+            name="q"
+            onChange={handleFilterChange}
+            placeholder="Tên hoặc chuyên khoa"
+            value={filters.q}
+          />
+          <input
+            className="input-base"
+            name="specialty"
+            onChange={handleFilterChange}
+            placeholder="Chuyên khoa"
+            value={filters.specialty}
+          />
+          <input
+            className="input-base"
+            name="location"
+            onChange={handleFilterChange}
+            placeholder="Khu vực"
+            value={filters.location}
+          />
+          <input
+            className="input-base"
+            name="insurance"
+            onChange={handleFilterChange}
+            placeholder="Bảo hiểm"
+            value={filters.insurance}
+          />
+          <input
+            className="input-base"
+            name="feeMin"
+            onChange={handleFilterChange}
+            placeholder="Phí từ"
+            value={filters.feeMin}
+          />
+          <input
+            className="input-base"
+            name="feeMax"
+            onChange={handleFilterChange}
+            placeholder="Phí đến"
+            value={filters.feeMax}
+          />
+          <select className="input-base" name="sortBy" onChange={handleFilterChange} value={filters.sortBy}>
+            <option value="rating">Sort: Rating</option>
+            <option value="fee">Sort: Fee</option>
+          </select>
+          <select
+            className="input-base"
+            name="sortOrder"
+            onChange={handleFilterChange}
+            value={filters.sortOrder}
+          >
+            <option value="desc">Giảm dần</option>
+            <option value="asc">Tăng dần</option>
+          </select>
 
-      {isLoading ? <p className="meta-text">Đang tải danh sách bác sĩ...</p> : null}
+          <button className="btn-primary md:col-span-4 px-4 py-2 text-sm" type="submit">
+            Áp dụng bộ lọc
+          </button>
+        </form>
+      </article>
+
+      {isLoading ? <p className="text-sm text-slate-600">Đang tải danh sách bác sĩ...</p> : null}
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="grid gap-3">
-        {result.data.map((doctor) => (
-          <div key={doctor.doctorId} className="rounded-xl border border-slate-200 p-4">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h3 className="font-semibold text-slate-900">{doctor.fullName}</h3>
-                <p className="text-sm text-slate-600">
-                  {doctor.specialty} - {doctor.location}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {result.data.map((doctor) => {
+          const detailRoute = buildDoctorDetailRoute({
+            pathname: location.pathname,
+            doctorId: doctor.doctorId,
+            isAuthenticated,
+            role,
+          });
+
+          return (
+            <article key={doctor.doctorId} className="surface-card overflow-hidden p-0">
+              <img
+                alt={doctor.fullName}
+                className="h-44 w-full object-cover"
+                src={doctor.avatarUrl || buildDoctorFallbackAvatar(doctor.fullName)}
+              />
+              <div className="space-y-3 p-4">
+                <div>
+                  <p className="text-lg font-semibold text-slate-900">{doctor.fullName}</p>
+                  <p className="text-sm text-slate-600">
+                    {doctor.specialty} • {doctor.location}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                  <div className="rounded-lg bg-slate-50 p-2">
+                    <p className="font-semibold text-slate-700">Phí khám</p>
+                    <p>{doctor.consultationFee.toLocaleString("vi-VN")}đ</p>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 p-2">
+                    <p className="font-semibold text-slate-700">Rating</p>
+                    <p>
+                      {doctor.ratingAvg} ({doctor.reviewCount})
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500">
+                  Bảo hiểm: {(doctor.insurancesAccepted || []).join(", ") || "-"}
                 </p>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn-soft px-3 py-2 text-xs"
+                    onClick={() => handleToggleCompare(doctor.doctorId)}
+                    type="button"
+                  >
+                    {selectedCompareIds.includes(doctor.doctorId) ? "Bỏ so sánh" : "So sánh"}
+                  </button>
+                  <Link className="btn-primary px-3 py-2 text-xs" to={detailRoute}>
+                    Xem chi tiết
+                  </Link>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  className="app-link"
-                  type="button"
-                  onClick={() => handleToggleCompare(doctor.doctorId)}
-                >
-                  {selectedCompareIds.includes(doctor.doctorId)
-                    ? "Bỏ so sánh"
-                    : "So sánh"}
-                </button>
-                <Link className="app-link" to={`/patient/doctors/${doctor.doctorId}`}>
-                  Xem chi tiết
-                </Link>
-              </div>
-            </div>
-            <p className="text-sm text-slate-700">
-              Phí: {doctor.consultationFee.toLocaleString("vi-VN")}đ - Rating:{" "}
-              {doctor.ratingAvg} ({doctor.reviewCount} đánh giá)
-            </p>
-            <p className="text-sm text-slate-700">
-              Kinh nghiệm: {doctor.yearsExperience} năm
-            </p>
-            <p className="text-sm text-slate-700">
-              Bảo hiểm: {(doctor.insurancesAccepted || []).join(", ") || "-"}
-            </p>
-          </div>
-        ))}
+            </article>
+          );
+        })}
       </div>
 
-      {/* Bảng compare hiển thị khi người dùng đã chọn ít nhất 2 bác sĩ. */}
       {comparedDoctors.length >= 2 ? (
-        <section className="rounded-xl border border-brand-100 bg-brand-50 p-4">
-          <h3 className="mb-3 font-semibold text-brand-700">Bảng so sánh bác sĩ</h3>
-          <div className="overflow-x-auto">
+        <article className="surface-card overflow-hidden p-0">
+          <div className="border-b border-brand-100 bg-brand-50 px-4 py-3">
+            <h3 className="text-sm font-semibold text-brand-700">Bảng so sánh bác sĩ</h3>
+          </div>
+          <div className="overflow-x-auto px-4 py-3">
             <table className="min-w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="border border-brand-100 p-2 text-left">Tiêu chí</th>
+                  <th className="border border-slate-200 p-2 text-left">Tiêu chí</th>
                   {comparedDoctors.map((doctor) => (
-                    <th key={doctor.doctorId} className="border border-brand-100 p-2 text-left">
+                    <th className="border border-slate-200 p-2 text-left" key={doctor.doctorId}>
                       {doctor.fullName}
                     </th>
                   ))}
@@ -256,82 +306,74 @@ export function DoctorsListPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="border border-brand-100 p-2">Chuyên khoa</td>
+                  <td className="border border-slate-200 p-2">Chuyên khoa</td>
                   {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
+                    <td className="border border-slate-200 p-2" key={doctor.doctorId}>
                       {doctor.specialty}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-brand-100 p-2">Khu vực</td>
+                  <td className="border border-slate-200 p-2">Khu vực</td>
                   {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
+                    <td className="border border-slate-200 p-2" key={doctor.doctorId}>
                       {doctor.location}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-brand-100 p-2">Phí khám</td>
+                  <td className="border border-slate-200 p-2">Phí khám</td>
                   {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
+                    <td className="border border-slate-200 p-2" key={doctor.doctorId}>
                       {doctor.consultationFee.toLocaleString("vi-VN")}đ
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-brand-100 p-2">Rating</td>
+                  <td className="border border-slate-200 p-2">Rating</td>
                   {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
+                    <td className="border border-slate-200 p-2" key={doctor.doctorId}>
                       {doctor.ratingAvg}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="border border-brand-100 p-2">Kinh nghiệm</td>
+                  <td className="border border-slate-200 p-2">Kinh nghiệm</td>
                   {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
+                    <td className="border border-slate-200 p-2" key={doctor.doctorId}>
                       {doctor.yearsExperience} năm
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="border border-brand-100 p-2">Bảo hiểm</td>
-                  {comparedDoctors.map((doctor) => (
-                    <td key={doctor.doctorId} className="border border-brand-100 p-2">
-                      {(doctor.insurancesAccepted || []).join(", ") || "-"}
                     </td>
                   ))}
                 </tr>
               </tbody>
             </table>
           </div>
-        </section>
+        </article>
       ) : null}
 
       {result.meta?.totalPages > 1 ? (
         <footer className="flex items-center justify-end gap-2">
           <button
-            className="app-link"
-            type="button"
+            className="btn-soft px-4 py-2 text-sm"
             disabled={result.meta.page <= 1}
             onClick={() => handleChangePage(result.meta.page - 1)}
+            type="button"
           >
             Trang trước
           </button>
-          <span className="meta-text">
+          <span className="text-sm text-slate-500">
             Trang {result.meta.page}/{result.meta.totalPages}
           </span>
           <button
-            className="app-link"
-            type="button"
+            className="btn-soft px-4 py-2 text-sm"
             disabled={result.meta.page >= result.meta.totalPages}
             onClick={() => handleChangePage(result.meta.page + 1)}
+            type="button"
           >
             Trang sau
           </button>
         </footer>
       ) : null}
-    </article>
+    </section>
   );
 }

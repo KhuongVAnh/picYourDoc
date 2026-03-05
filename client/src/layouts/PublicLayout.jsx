@@ -1,69 +1,87 @@
-import { Link, Outlet } from "react-router-dom";
+﻿import { Link, NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
+import { ROUTES, getDefaultRouteByRole } from "../lib/routes";
 
-// Layout công khai cho trang chủ và đăng nhập.
+const PUBLIC_NAV_ITEMS = [
+  { label: "Trang chủ", to: ROUTES.public.home },
+  { label: "Tìm bác sĩ", to: ROUTES.public.doctors },
+  { label: "Bảng giá", to: ROUTES.public.pricing },
+  { label: "Giới thiệu", to: ROUTES.public.about },
+];
+
+// Trả class cho item menu public theo trạng thái active để đồng bộ style.
+function getPublicNavClass({ isActive }) {
+  if (isActive) {
+    return "rounded-full bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 no-underline";
+  }
+  return "rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 hover:no-underline";
+}
+
+// Layout public cho zone marketing + auth theo phong cách clinical sáng.
 export function PublicLayout() {
-  const { role, setRole, isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, role, logout } = useAuth();
+  const appEntry = getDefaultRouteByRole(role);
 
   return (
-    <main className="app-shell">
-      <header className="app-header">
-        <h1 className="text-3xl font-bold text-brand-700">PickYourDoc</h1>
-        <div className="flex items-center gap-3">
-          {isAuthenticated ? (
-            <>
-              <div className="text-right">
-                <p className="meta-text">{user?.email}</p>
-                <p className="meta-text">Role: {role}</p>
-              </div>
-              <button className="app-link" type="button" onClick={logout}>
-                Đăng xuất
-              </button>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <label htmlFor="role" className="text-sm font-medium text-slate-700">
-                Vai trò demo:
-              </label>
-              <select
-                id="role"
-                value={role}
-                onChange={(event) => setRole(event.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
-              >
-                <option value="patient">patient</option>
-                <option value="doctor">doctor</option>
-                <option value="admin">admin</option>
-              </select>
-            </div>
-          )}
+    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-3 px-4 py-3 md:px-6">
+          <Link className="no-underline" to={ROUTES.public.home}>
+            <span className="text-2xl font-extrabold tracking-tight text-brand-700">
+              PickYourDoc
+            </span>
+          </Link>
+
+          <nav className="hidden items-center gap-1 lg:flex">
+            {PUBLIC_NAV_ITEMS.map((item) => (
+              <NavLink key={item.to} className={getPublicNavClass} to={item.to}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            {isAuthenticated ? (
+              <>
+                <div className="hidden text-right md:block">
+                  <p className="text-sm font-semibold text-slate-900">
+                    {user?.displayName || user?.email}
+                  </p>
+                  <p className="text-xs text-slate-500">{user?.email}</p>
+                </div>
+                <Link className="btn-primary px-4 py-2 text-sm" to={appEntry}>
+                  Vào ứng dụng
+                </Link>
+                <button className="btn-soft px-4 py-2 text-sm" onClick={logout} type="button">
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="btn-soft px-4 py-2 text-sm" to={ROUTES.public.login}>
+                  Đăng nhập
+                </Link>
+                <Link className="btn-primary px-4 py-2 text-sm" to={ROUTES.public.register}>
+                  Đăng ký
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 lg:hidden">
+          <div className="mx-auto flex w-full max-w-[1280px] gap-2 overflow-x-auto">
+            {PUBLIC_NAV_ITEMS.map((item) => (
+              <NavLink key={item.to} className={getPublicNavClass} to={item.to}>
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
         </div>
       </header>
 
-      <nav className="app-nav">
-        <Link className="app-link" to="/">
-          Trang chủ
-        </Link>
-        <Link className="app-link" to="/login">
-          Đăng nhập
-        </Link>
-        <Link className="app-link" to="/patient">
-          Patient
-        </Link>
-        <Link className="app-link" to="/doctor">
-          Doctor
-        </Link>
-        <Link className="app-link" to="/admin">
-          Admin
-        </Link>
-        <Link className="app-link" to="/doctors">
-          Danh sách bác sĩ
-        </Link>
-      </nav>
-
-      <section className="app-content">
+      <main className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-6">
         <Outlet />
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

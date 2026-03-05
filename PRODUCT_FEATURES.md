@@ -31,11 +31,11 @@
 - [x] `USER-06` [MVP] Chat tư vấn với bác sĩ trong phiên khám.
 - [x] `USER-07` [MVP] Video call in-app với bác sĩ.
 - [x] `USER-08` [MVP] Lưu lịch sử tư vấn theo `consult_session`.
-- [ ] `USER-09` [MVP] Hồ sơ sức khỏe cá nhân (bệnh nền, dị ứng, thuốc, kết quả xét nghiệm).
-- [ ] `USER-10` [MVP] Hồ sơ sức khỏe gia đình (quản lý nhiều thành viên).
-- [ ] `USER-11` [MVP] Timeline điều trị cơ bản cho cá nhân/gia đình.
-- [ ] `USER-12` [MVP] Thanh toán online cho gói dịch vụ.
-- [ ] `USER-13` [MVP] Đăng ký gói Free/Premium/Family.
+- [x] `USER-09` [MVP] Hồ sơ sức khỏe cá nhân (bệnh nền, dị ứng, thuốc, kết quả xét nghiệm).
+- [x] `USER-10` [MVP] Hồ sơ sức khỏe gia đình (quản lý nhiều thành viên).
+- [x] `USER-11` [MVP] Timeline điều trị cơ bản cho cá nhân/gia đình.
+- [x] `USER-12` [MVP] Thanh toán online cho gói dịch vụ (mock checkout success/fail).
+- [x] `USER-13` [MVP] Đăng ký gói Free/Premium/Family.
 - [ ] `USER-14` [POST-MVP] Theo dõi chỉ số sức khỏe nâng cao (nhập tay/đồng bộ thiết bị).
 - [ ] `USER-15` [POST-MVP] Dashboard sức khỏe nâng cao với biểu đồ xu hướng.
 - [ ] `USER-16` [POST-MVP] Nội dung y khoa kiểm duyệt (bài viết/video/infographic).
@@ -43,13 +43,13 @@
 - [ ] `USER-18` [POST-MVP] CSKH/Chatbot nâng cao.
 
 ### C) Giao diện bác sĩ
-- [ ] `DOC-01` [MVP] PHR tập trung: xem bệnh sử, xét nghiệm, đơn thuốc, timeline.
-- [ ] `DOC-02` [MVP] Quản lý kế hoạch chăm sóc định kỳ (nhắc tái khám, nhắc thuốc, follow-up).
+- [x] `DOC-01` [MVP] PHR tập trung: xem bệnh sử, xét nghiệm, đơn thuốc, timeline.
+- [x] `DOC-02` [MVP] Quản lý kế hoạch chăm sóc định kỳ (nhắc tái khám, nhắc thuốc, follow-up).
 - [x] `DOC-03` [MVP] Kênh liên lạc đa phương thức (chat/video) lưu trữ thành bệnh án.
 - [x] `DOC-04` [MVP] Lịch biểu thông minh (ngày/tuần/tháng, slots đặt lịch).
-- [ ] `DOC-05` [MVP] Quản lý gói dịch vụ và SLA phản hồi.
+- [x] `DOC-05` [MVP] Quản lý gói dịch vụ và SLA phản hồi.
 - [x] `DOC-06` [MVP] Quản lý lịch khám online/offline.
-- [ ] `DOC-07` [MVP] Quản lý thu nhập cơ bản theo số ca và giờ trực.
+- [x] `DOC-07` [MVP] Quản lý thu nhập cơ bản theo số ca và giờ trực.
 - [ ] `DOC-08` [POST-MVP] Dashboard theo dõi real-time ECG/SpO2 từ Ironman Holter.
 - [ ] `DOC-09` [POST-MVP] Cảnh báo tức thì khi phát hiện chỉ số bất thường.
 - [ ] `DOC-10` [POST-MVP] Giám sát chỉ số sức khỏe bệnh nhân từ dữ liệu nhập/thiết bị.
@@ -73,3 +73,9 @@
 - `BE-09`, `BE-10`, `FE-06`, `FE-07` -> `USER-09`, `USER-10`, `USER-11`, `DOC-01`, `DOC-02`
 - `BE-11`, `BE-12`, `BE-13`, `FE-08` -> `USER-12`, `USER-13`, `DOC-05`
 - `BE-14`, `FE-09` -> `DOC-02`, `DOC-04`, `DOC-05`, `DOC-06`, `DOC-07`
+
+## 6) Cập nhật bổ sung 2026-03-05 (Production UI)
+- [x] `UI-RED-01` Refactor route structure mới theo `/app/*` + `/auth/*` + system pages.
+- [x] `UI-RED-02` Redesign layout Patient/Doctor theo phong cách clinical dashboard.
+- [x] `UI-RED-03` Áp dụng design token Tailwind + component class dùng chung.
+- [x] `UI-RED-04` Tích hợp Cloudinary upload + hiển thị media trên các luồng profile/records/plans.

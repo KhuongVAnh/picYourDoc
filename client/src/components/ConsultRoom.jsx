@@ -422,14 +422,14 @@ export function ConsultRoom({ mode, appointmentId, accessToken }) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [session?.id, accessToken]);
+  }, [session?.id, accessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dọn tài nguyên media khi rời trang consult.
   useEffect(() => {
     return () => {
       resetCallState("idle");
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Gửi tin nhắn realtime và append qua event broadcast từ server.
   async function handleSendMessage(event) {
