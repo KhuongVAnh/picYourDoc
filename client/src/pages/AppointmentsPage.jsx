@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  cancelAppointmentApi,
-  getAppointmentsApi,
-} from "../lib/api";
+import { cancelAppointmentApi, getAppointmentsApi } from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime, getHoursUntil } from "../lib/date";
 
-// Trang lịch hẹn của bệnh nhân, hỗ trợ hủy và chuyển sang luồng đổi lịch.
+// Trang lịch hẹn của bệnh nhân, hỗ trợ hủy/đổi lịch và vào phòng tư vấn online.
 export function AppointmentsPage() {
   const navigate = useNavigate();
   const { accessToken, isAuthenticated } = useAuth();
@@ -16,7 +13,7 @@ export function AppointmentsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Tải danh sách lịch hẹn theo bộ lọc trạng thái.
+  // Tải danh sách lịch hẹn theo bộ lọc trạng thái hiện tại.
   useEffect(() => {
     let ignore = false;
 
@@ -32,6 +29,7 @@ export function AppointmentsPage() {
           { page: 1, limit: 20, status: status || undefined },
           accessToken
         );
+
         if (!ignore) {
           setAppointments(response.data || []);
         }
@@ -52,7 +50,7 @@ export function AppointmentsPage() {
     };
   }, [status, accessToken, isAuthenticated]);
 
-  // Tính lịch còn cho phép hủy/đổi theo rule >6 giờ.
+  // Tính cờ cho phép bệnh nhân hủy/đổi lịch theo rule lớn hơn 6 giờ.
   const enrichedAppointments = useMemo(
     () =>
       appointments.map((item) => ({
@@ -63,7 +61,7 @@ export function AppointmentsPage() {
     [appointments]
   );
 
-  // Hủy lịch hẹn và refresh danh sách tại chỗ.
+  // Gọi API hủy lịch hẹn và cập nhật trạng thái tại danh sách hiện tại.
   async function handleCancelAppointment(appointmentId) {
     try {
       await cancelAppointmentApi(
@@ -71,8 +69,9 @@ export function AppointmentsPage() {
         { reason: "Bệnh nhân hủy lịch qua ứng dụng" },
         accessToken
       );
-      setAppointments((prev) =>
-        prev.map((item) =>
+
+      setAppointments((current) =>
+        current.map((item) =>
           item.id === appointmentId ? { ...item, status: "CANCELLED" } : item
         )
       );
@@ -81,7 +80,7 @@ export function AppointmentsPage() {
     }
   }
 
-  // Điều hướng đến trang đổi lịch với context lịch gốc.
+  // Chuyển sang màn hình đổi lịch và truyền context lịch gốc qua query string.
   function handleGoReschedule(appointment) {
     const search = new URLSearchParams({
       doctorId: appointment.doctorId,
@@ -163,6 +162,11 @@ export function AppointmentsPage() {
               >
                 Đổi lịch
               </button>
+              {appointment.status === "CONFIRMED" ? (
+                <Link className="app-link" to={`/patient/consults/${appointment.id}`}>
+                  Vào phòng tư vấn
+                </Link>
+              ) : null}
             </div>
 
             {!appointment.canPatientUpdate &&

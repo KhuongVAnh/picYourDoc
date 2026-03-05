@@ -38,6 +38,16 @@ enum ReminderStatus {
   FAILED
 }
 
+enum ConsultSessionStatus {
+  ACTIVE
+  ENDED
+}
+
+enum ConsultMessageType {
+  TEXT
+  SYSTEM
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -49,6 +59,8 @@ model User {
   doctorProfile       DoctorProfile?
   patientAppointments Appointment[]     @relation("PatientAppointments")
   notifications       InAppNotification[]
+  startedConsultSessions ConsultSession[] @relation("StartedConsultSessions")
+  sentConsultMessages ConsultMessage[]   @relation("SentConsultMessages")
 
   @@map("users")
 }
@@ -115,10 +127,44 @@ model Appointment {
   doctor       DoctorProfile @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
   slot         DoctorSlot?   @relation(fields: [slotId], references: [id], onDelete: SetNull)
   reminderLogs ReminderLog[]
+  consultSession ConsultSession?
 
   @@index([doctorId, status, startAt, endAt], map: "appointments_doctor_status_time_idx")
   @@index([patientUserId, status, startAt], map: "appointments_patient_status_time_idx")
   @@map("appointments")
+}
+
+model ConsultSession {
+  id              String              @id @default(cuid())
+  appointmentId   String              @unique @map("appointment_id")
+  status          ConsultSessionStatus @default(ACTIVE)
+  startedByUserId String              @map("started_by_user_id")
+  startedAt       DateTime            @default(now()) @map("started_at")
+  endedAt         DateTime?           @map("ended_at")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  appointment Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  startedBy   User           @relation("StartedConsultSessions", fields: [startedByUserId], references: [id], onDelete: Cascade)
+  messages    ConsultMessage[]
+
+  @@index([status, startedAt], map: "consult_sessions_status_started_idx")
+  @@map("consult_sessions")
+}
+
+model ConsultMessage {
+  id           String             @id @default(cuid())
+  sessionId    String             @map("session_id")
+  senderUserId String             @map("sender_user_id")
+  messageType  ConsultMessageType @default(TEXT) @map("message_type")
+  content      String             @db.Text
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  session ConsultSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender  User           @relation("SentConsultMessages", fields: [senderUserId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt], map: "consult_messages_session_created_idx")
+  @@map("consult_messages")
 }
 
 model InAppNotification {

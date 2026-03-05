@@ -107,6 +107,37 @@ function markNotificationReadApi(notificationId, accessToken) {
   });
 }
 
+// API doctor bắt đầu hoặc lấy lại consult session từ một appointment CONFIRMED.
+function startConsultSessionApi(appointmentId, accessToken) {
+  return apiRequest(`/api/consults/appointments/${appointmentId}/start`, {
+    method: "POST",
+    accessToken,
+  });
+}
+
+// API lấy consult session hiện tại theo appointment cho patient/doctor/admin.
+function getConsultSessionByAppointmentApi(appointmentId, accessToken) {
+  return apiRequest(`/api/consults/appointments/${appointmentId}/session`, {
+    accessToken,
+  });
+}
+
+// API lấy lịch sử chat của một consult session có phân trang.
+function getConsultMessagesApi(sessionId, query, accessToken) {
+  return apiRequest(`/api/consults/sessions/${sessionId}/messages`, {
+    query,
+    accessToken,
+  });
+}
+
+// API doctor kết thúc một consult session đang ACTIVE.
+function endConsultSessionApi(sessionId, accessToken) {
+  return apiRequest(`/api/consults/sessions/${sessionId}/end`, {
+    method: "PATCH",
+    accessToken,
+  });
+}
+
 export {
   API_BASE_URL,
   apiRequest,
@@ -119,4 +150,8 @@ export {
   rescheduleAppointmentApi,
   getNotificationsApi,
   markNotificationReadApi,
+  startConsultSessionApi,
+  getConsultSessionByAppointmentApi,
+  getConsultMessagesApi,
+  endConsultSessionApi,
 };

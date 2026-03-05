@@ -11,6 +11,7 @@ const env = {
   jwtAccessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "1h",
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   appointmentCancelWindowHours: Number(process.env.APPOINTMENT_CANCEL_WINDOW_HOURS || 6),
+  clientOrigin: process.env.CLIENT_ORIGIN || "http://localhost:5173",
   smtpHost: process.env.SMTP_HOST || "",
   smtpPort: Number(process.env.SMTP_PORT || 587),
   smtpUser: process.env.SMTP_USER || "",

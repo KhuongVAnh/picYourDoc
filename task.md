@@ -2,16 +2,14 @@
 
 ## 0) Bối cảnh nhanh (đọc trong 2 phút)
 - Dự án: PickYourDoc (MVP 3 tháng).
-- Mục tiêu MVP: tìm bác sĩ, đặt/hủy lịch, tư vấn từ xa (chat + video in-app), hồ sơ sức khỏe cá nhân/gia đình, gói dịch vụ + thanh toán giả lập, dashboard bác sĩ cơ bản.
 - Stack đã chốt:
   - Backend: Node.js + Express.
   - ORM & DB: Prisma + MySQL (schema, migration, seed).
   - Frontend: React + Vite + TailwindCSS.
-- Trạng thái hiện tại codebase:
-  - Backend đã có module nền tảng và module Phase 2.
-  - Frontend đã có React Router + role layout + màn hình Phase 2.
-  - Tài liệu kỹ thuật: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`.
-  - Checklist tính năng: `PRODUCT_FEATURES.md`.
+- Mục tiêu MVP: tìm bác sĩ, đặt/hủy lịch, tư vấn từ xa (chat + video in-app), hồ sơ sức khỏe cá nhân/gia đình, gói dịch vụ + thanh toán giả lập, dashboard bác sĩ cơ bản.
+- Trạng thái codebase hiện tại:
+  - Phase 1 và Phase 2 đã hoàn thành.
+  - Phase 3 đã triển khai code (REST + Socket + UI), cần user chạy migration và test E2E trên DB thực tế.
 
 ## 1) Ràng buộc bắt buộc (NON-NEGOTIABLE)
 1. Ngôn ngữ tài liệu và mô tả task: **tiếng Việt có dấu, đúng chính tả**.
@@ -23,13 +21,13 @@
    - Ghi rõ vào mục `Blockers`.
    - Chỉ tiếp tục sau khi user phê duyệt.
 6. Khi hoàn thành bất kỳ task nào, **bắt buộc cập nhật checklist feature tương ứng trong `PRODUCT_FEATURES.md`**.
-7. **Không tạo Docker local**; `DATABASE_URL` sẽ do user tự cung cấp sau.
+7. **Không tạo Docker local**; `DATABASE_URL` do user cung cấp.
+8. Khi thay đổi database/schema, **không tự động tạo file migration**; user sẽ tự tạo migration.
 
 ## 2) Quy ước làm việc đa-agent
 - Mỗi task có mã: `BE-xx`, `FE-xx`, `DB-xx`, `QA-xx`, `DOC-xx`.
-- Khi bắt đầu task: thêm tên người làm vào dòng task.
-- Khi hoàn thành task: tick checkbox `[x]`, thêm ngày giờ và commit/reference.
-- Khi hoàn thành task: tick luôn feature tương ứng trong `PRODUCT_FEATURES.md` (không được bỏ qua).
+- Khi bắt đầu task: thêm owner vào task.
+- Khi hoàn thành task: tick `[x]`, thêm ngày giờ và commit/reference.
 - Không xóa lịch sử; chỉ cập nhật trạng thái.
 - Mỗi phiên làm việc phải cập nhật:
   - `Tiến độ hôm nay`
@@ -59,11 +57,11 @@
 - [x] `FE-03` UI đặt/hủy/đổi lịch và lịch hẹn của bệnh nhân. Owner: Codex - 2026-03-05
 
 ### Phase 3 - Remote Consult (Tuần 5-7)
-- [ ] `BE-06` Tích hợp Socket.IO cho chat realtime. Owner:
-- [ ] `BE-07` Signaling WebRTC cho video call in-app 1:1. Owner:
-- [ ] `BE-08` Lưu lịch sử chat theo `consult_session`. Owner:
-- [ ] `FE-04` UI chat theo phiên tư vấn. Owner:
-- [ ] `FE-05` UI video call in-app (start/end, trạng thái kết nối). Owner:
+- [x] `BE-06` Tích hợp Socket.IO cho chat realtime. Owner: Codex - 2026-03-05
+- [x] `BE-07` Signaling WebRTC cho video call in-app 1:1. Owner: Codex - 2026-03-05
+- [x] `BE-08` Lưu lịch sử chat theo `consult_session`. Owner: Codex - 2026-03-05
+- [x] `FE-04` UI chat theo phiên tư vấn. Owner: Codex - 2026-03-05
+- [x] `FE-05` UI video call in-app (start/end, trạng thái kết nối). Owner: Codex - 2026-03-05
 
 ### Phase 4 - Health Records & Family (Tuần 8-9)
 - [ ] `BE-09` API hồ sơ gia đình (CRUD thành viên). Owner:
@@ -103,43 +101,51 @@
 - Ngày: 2026-03-05
 - Người cập nhật: Codex
 - Đã xong:
-  - Hoàn tất toàn bộ Phase 2 theo plan đã chốt.
-  - Mở rộng Prisma schema + migration + seed cho doctors/appointments/notifications/reminders.
-  - Implement API BE-03/BE-04/BE-05 và reminder worker in-app + email (fallback log nếu thiếu SMTP).
-  - Implement UI FE-02/FE-03: doctor listing/filter/compare, doctor detail private, create/cancel/reschedule appointments, notification panel.
-  - Chạy kiểm tra `client` lint/build + `server` prisma generate/validate + backend bootstrap.
+  - Hoàn thành code Phase 3:
+    - Backend: `consults` REST API (start/get session/get messages/end session), Socket.IO auth + room + chat realtime + signaling WebRTC + event phiên kết thúc.
+    - Frontend: trang consult cho doctor/patient, chat realtime, video call 1:1, nút vào phòng tư vấn từ lịch hẹn và dashboard bác sĩ.
+  - Cập nhật `README.md` và `.env.example` với `CLIENT_ORIGIN`.
+  - Cập nhật checklist task + feature theo Phase 3.
 - Đang làm:
-  - Chuẩn bị handoff sang Phase 3.
+  - Chờ user chạy migration mới cho schema consult trên DB thực tế.
 - Kế tiếp:
-  - Bắt đầu `BE-06`, `BE-07`, `FE-04`.
+  - Chạy test scenario API/socket/video trên môi trường đã migrate.
+  - Bắt đầu Phase 4 sau khi xác nhận Phase 3 pass E2E.
 
 ## 8) Blockers / Risks
-- Mã blocker: BLK-002
-- Mô tả: Chưa chạy migrate/seed thật trên môi trường production của user.
-- Ảnh hưởng: Chưa có dữ liệu thật để QA end-to-end với DB live.
+- Mã blocker: BLK-003
+- Mô tả: `npm run prisma:generate` bị lỗi `EPERM` do file query engine đang bị lock trên Windows/OneDrive.
+- Ảnh hưởng: Chưa xác nhận được vòng kiểm tra Prisma generate sau khi sửa schema.
 - Cần ai quyết định: User
-- Deadline quyết định: Trước khi chuyển sang test tích hợp Phase 3.
+- Deadline quyết định: Trước khi chạy E2E Phase 3.
 
 ## 9) Handoff cho agent tiếp theo
-- Task đang dở: Chưa bắt đầu Phase 3 (`BE-06`, `BE-07`, `BE-08`, `FE-04`, `FE-05`).
+- Task đang dở:
+  - QA scenario Phase 3 trên DB đã migrate.
 - Bối cảnh kỹ thuật cần biết:
-  - `GET /api/doctors` là public, `GET /api/doctors/:doctorId` yêu cầu JWT.
-  - Appointment hỗ trợ hybrid: slot hoặc proposal, trạng thái `REQUESTED -> CONFIRMED`.
-  - Reminder chạy mỗi phút, gửi in-app và email theo mốc 24h + 1h.
+  - `consult_session` chỉ được tạo khi doctor gọi `POST /api/consults/appointments/:appointmentId/start`.
+  - Patient vào phòng tư vấn qua route `/patient/consults/:appointmentId`, nếu chưa có session sẽ ở trạng thái chờ.
+  - Socket events đã có: join/leave/message/send/signal offer-answer-ice/call end.
+  - WebRTC hiện tại LAN-first (STUN tối thiểu), chưa có TURN.
 - File đã động vào:
-  - `server/src/*`
-  - `server/prisma/*`
-  - `client/src/*`
-  - `PRODUCT_FEATURES.md`, `task.md`
+  - `server/prisma/schema.prisma`
+  - `server/src/modules/consults/*`
+  - `server/src/realtime/socket.js`
+  - `server/index.js`, `server/src/config/env.js`
+  - `client/src/components/ConsultRoom.jsx`
+  - `client/src/pages/DoctorConsultPage.jsx`
+  - `client/src/pages/PatientConsultPage.jsx`
+  - `client/src/pages/DoctorDashboardPage.jsx`
+  - `client/src/pages/AppointmentsPage.jsx`
+  - `client/src/lib/api.js`, `client/src/lib/socket.js`, `client/src/App.jsx`
 - Việc tiếp theo cụ thể:
-  - Tích hợp Socket.IO cho consult room.
-  - Tích hợp signaling WebRTC cho call 1:1.
-  - Tạo chat timeline theo `consult_session`.
+  - User chạy migration cho schema consult.
+  - Re-run `prisma:generate` khi không còn lock file.
+  - Test checklist Phase 3 mục 7.1 -> 7.4.
 - Lưu ý tránh phá vỡ API/schema/business logic:
-  - Không đổi auth contract `/api/auth/*`.
-  - Không sửa migration đã có; chỉ thêm migration mới.
+  - Không thay đổi API auth/appointments/doctors đã có.
+  - Không sửa migration cũ; chỉ thêm migration mới do user tạo.
 
 ## 11) Agent Rules
-- Khi viết hoặc sửa hàm, bắt buộc thêm comment ngắn ngay trên đầu hàm để mô tả tác dụng, các module nhỏ trong hàm cũng cần comment tác dụng.
+- Khi viết hoặc sửa hàm, bắt buộc thêm comment ngắn ngay trên đầu hàm để mô tả tác dụng; các module nhỏ trong hàm cũng cần comment tác dụng.
 - Comment trong code phải dùng tiếng Việt có dấu.
-- Khi thay đổi database/schema, **không tự động tạo file migration**; user sẽ tự tạo migration.

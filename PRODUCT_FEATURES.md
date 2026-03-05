@@ -27,10 +27,10 @@
 - [x] `USER-02` [MVP] Xem hồ sơ bác sĩ (bằng cấp, kinh nghiệm, phí khám, đánh giá).
 - [x] `USER-03` [MVP] Đặt lịch khám online theo khung giờ trống.
 - [x] `USER-04` [MVP] Hủy/đổi lịch khám theo chính sách thời gian.
-- [x] `USER-05` [MVP] Nhắc lịch tự động (web/app, email, SMS, push).
-- [ ] `USER-06` [MVP] Chat tư vấn với bác sĩ trong phiên khám.
-- [ ] `USER-07` [MVP] Video call in-app với bác sĩ.
-- [ ] `USER-08` [MVP] Lưu lịch sử tư vấn (nội dung, hướng dẫn, chẩn đoán sơ bộ, đơn thuốc nếu có).
+- [x] `USER-05` [MVP] Nhắc lịch tự động (in-app, email; SMS/push để mở rộng).
+- [x] `USER-06` [MVP] Chat tư vấn với bác sĩ trong phiên khám.
+- [x] `USER-07` [MVP] Video call in-app với bác sĩ.
+- [x] `USER-08` [MVP] Lưu lịch sử tư vấn theo `consult_session`.
 - [ ] `USER-09` [MVP] Hồ sơ sức khỏe cá nhân (bệnh nền, dị ứng, thuốc, kết quả xét nghiệm).
 - [ ] `USER-10` [MVP] Hồ sơ sức khỏe gia đình (quản lý nhiều thành viên).
 - [ ] `USER-11` [MVP] Timeline điều trị cơ bản cho cá nhân/gia đình.
@@ -45,7 +45,7 @@
 ### C) Giao diện bác sĩ
 - [ ] `DOC-01` [MVP] PHR tập trung: xem bệnh sử, xét nghiệm, đơn thuốc, timeline.
 - [ ] `DOC-02` [MVP] Quản lý kế hoạch chăm sóc định kỳ (nhắc tái khám, nhắc thuốc, follow-up).
-- [ ] `DOC-03` [MVP] Kênh liên lạc đa phương thức (chat/video) lưu trữ thành bệnh án.
+- [x] `DOC-03` [MVP] Kênh liên lạc đa phương thức (chat/video) lưu trữ thành bệnh án.
 - [x] `DOC-04` [MVP] Lịch biểu thông minh (ngày/tuần/tháng, slots đặt lịch).
 - [ ] `DOC-05` [MVP] Quản lý gói dịch vụ và SLA phản hồi.
 - [x] `DOC-06` [MVP] Quản lý lịch khám online/offline.
