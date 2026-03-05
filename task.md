@@ -187,6 +187,6 @@
 - [x] Kiểm tra kỹ thuật:
   - `client`: `npm run lint` pass, `npm run build` pass.
   - `server`: `npx prisma validate` pass, app bootstrap pass.
-- [ ] Việc user cần làm sau pull code:
+- [x] Việc user cần làm sau pull code:
   - Tự tạo/chạy migration cho các field mới trong `schema.prisma`.
   - Seed lại dữ liệu nếu muốn có avatar/thumbnail demo.
