@@ -1,7 +1,7 @@
 # PickYourDoc
 
 Nền tảng HealthTech kết nối bác sĩ gia đình với bệnh nhân/gia đình để chăm sóc sức khỏe liên tục.
-
+url database: mysql://root:OYdfTeElJvrCCIxJNJLovERUmWtGWcPC@interchange.proxy.rlwy.net:38561/railway
 ## Cấu trúc repository
 - `server/`: Backend API (Express + Prisma + MySQL).
 - `client/`: Frontend Web App (React + Vite).

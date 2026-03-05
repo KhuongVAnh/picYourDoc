@@ -5,6 +5,9 @@ const { appointmentsRouter } = require("../modules/appointments/appointments.rou
 const { consultsRouter } = require("../modules/consults/consults.routes");
 const { recordsRouter } = require("../modules/records/records.routes");
 const {
+  notificationsRouter,
+} = require("../modules/notifications/notifications.routes");
+const {
   subscriptionsRouter,
 } = require("../modules/subscriptions/subscriptions.routes");
 
@@ -15,6 +18,7 @@ apiRouter.use("/doctors", doctorsRouter);
 apiRouter.use("/appointments", appointmentsRouter);
 apiRouter.use("/consults", consultsRouter);
 apiRouter.use("/records", recordsRouter);
+apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/subscriptions", subscriptionsRouter);
 
 module.exports = { apiRouter };

@@ -13,6 +13,31 @@ enum Role {
   admin
 }
 
+enum AppointmentSourceType {
+  SLOT
+  PROPOSAL
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  REJECTED
+  CANCELLED
+  RESCHEDULED
+  COMPLETED
+}
+
+enum ReminderChannel {
+  IN_APP
+  EMAIL
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -21,5 +46,109 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  doctorProfile       DoctorProfile?
+  patientAppointments Appointment[]     @relation("PatientAppointments")
+  notifications       InAppNotification[]
+
   @@map("users")
+}
+
+model DoctorProfile {
+  id                 String    @id @default(cuid())
+  userId             String    @unique @map("user_id")
+  fullName           String    @map("full_name")
+  specialty          String
+  location           String
+  consultationFee    Decimal   @map("consultation_fee") @db.Decimal(10, 2)
+  yearsExperience    Int       @map("years_experience")
+  bio                String
+  ratingAvg          Float     @default(0) @map("rating_avg")
+  reviewCount        Int       @default(0) @map("review_count")
+  insurancesAccepted Json      @map("insurances_accepted")
+  isActive           Boolean   @default(true) @map("is_active")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots        DoctorSlot[]
+  appointments Appointment[] @relation("DoctorAppointments")
+
+  @@map("doctor_profiles")
+}
+
+model DoctorSlot {
+  id        String   @id @default(cuid())
+  doctorId  String   @map("doctor_id")
+  startAt   DateTime @map("start_at")
+  endAt     DateTime @map("end_at")
+  isActive  Boolean  @default(true) @map("is_active")
+  isBooked  Boolean  @default(false) @map("is_booked")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  doctor       DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@unique([doctorId, startAt, endAt])
+  @@map("doctor_slots")
+}
+
+model Appointment {
+  id               String                @id @default(cuid())
+  patientUserId    String                @map("patient_user_id")
+  doctorId         String                @map("doctor_id")
+  sourceType       AppointmentSourceType @map("source_type")
+  status           AppointmentStatus     @default(REQUESTED)
+  startAt          DateTime              @map("start_at")
+  endAt            DateTime              @map("end_at")
+  reason           String?
+  cancelReason     String?               @map("cancel_reason")
+  rescheduleReason String?               @map("reschedule_reason")
+  conflictFlag     Boolean               @default(false) @map("conflict_flag")
+  slotId           String?               @map("slot_id")
+  confirmedAt      DateTime?             @map("confirmed_at")
+  cancelledAt      DateTime?             @map("cancelled_at")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  updatedAt        DateTime              @updatedAt @map("updated_at")
+
+  patient      User          @relation("PatientAppointments", fields: [patientUserId], references: [id], onDelete: Cascade)
+  doctor       DoctorProfile @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: Cascade)
+  slot         DoctorSlot?   @relation(fields: [slotId], references: [id], onDelete: SetNull)
+  reminderLogs ReminderLog[]
+
+  @@index([doctorId, status, startAt, endAt], map: "appointments_doctor_status_time_idx")
+  @@index([patientUserId, status, startAt], map: "appointments_patient_status_time_idx")
+  @@map("appointments")
+}
+
+model InAppNotification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String
+  title     String
+  content   String
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "notifications_user_created_idx")
+  @@map("in_app_notifications")
+}
+
+model ReminderLog {
+  id          String         @id @default(cuid())
+  appointmentId String       @map("appointment_id")
+  channel     ReminderChannel
+  scheduledFor DateTime      @map("scheduled_for")
+  sentAt      DateTime?      @map("sent_at")
+  status      ReminderStatus @default(PENDING)
+  errorMessage String?       @map("error_message")
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, channel, scheduledFor])
+  @@index([status, scheduledFor], map: "reminder_status_schedule_idx")
+  @@map("reminder_logs")
 }

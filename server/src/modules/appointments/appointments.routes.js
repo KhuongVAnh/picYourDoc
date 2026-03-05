@@ -3,6 +3,7 @@ const {
   authenticate,
   authorizeRoles,
 } = require("../../middlewares/auth.middleware");
+const appointmentsController = require("./appointments.controller");
 
 const appointmentsRouter = Router();
 
@@ -11,13 +12,32 @@ appointmentsRouter.use(authenticate);
 appointmentsRouter.get(
   "/",
   authorizeRoles("patient", "doctor", "admin"),
-  (req, res) => {
-    return res.status(200).json({
-      data: [],
-      message:
-        "Appointments module scaffolded. API detail will be implemented in Phase 2.",
-    });
-  }
+  appointmentsController.listAppointments
+);
+appointmentsRouter.post(
+  "/",
+  authorizeRoles("patient"),
+  appointmentsController.createAppointment
+);
+appointmentsRouter.patch(
+  "/:id/confirm",
+  authorizeRoles("doctor"),
+  appointmentsController.confirmAppointment
+);
+appointmentsRouter.patch(
+  "/:id/reject",
+  authorizeRoles("doctor"),
+  appointmentsController.rejectAppointment
+);
+appointmentsRouter.patch(
+  "/:id/cancel",
+  authorizeRoles("patient", "doctor"),
+  appointmentsController.cancelAppointment
+);
+appointmentsRouter.patch(
+  "/:id/reschedule",
+  authorizeRoles("patient", "doctor"),
+  appointmentsController.rescheduleAppointment
 );
 
 module.exports = { appointmentsRouter };

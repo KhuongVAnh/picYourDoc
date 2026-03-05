@@ -23,11 +23,11 @@
 - [x] `FND-05` [FOUNDATION] Frontend setup TailwindCSS.
 
 ### B) Giao diện người dùng (Bệnh nhân/Gia đình)
-- [ ] `USER-01` [MVP] Tìm bác sĩ theo chuyên khoa/triệu chứng/khu vực/phí/bảo hiểm.
-- [ ] `USER-02` [MVP] Xem hồ sơ bác sĩ (bằng cấp, kinh nghiệm, phí khám, đánh giá).
-- [ ] `USER-03` [MVP] Đặt lịch khám online theo khung giờ trống.
-- [ ] `USER-04` [MVP] Hủy/đổi lịch khám theo chính sách thời gian.
-- [ ] `USER-05` [MVP] Nhắc lịch tự động (web/app, email, SMS, push).
+- [x] `USER-01` [MVP] Tìm bác sĩ theo chuyên khoa/triệu chứng/khu vực/phí/bảo hiểm.
+- [x] `USER-02` [MVP] Xem hồ sơ bác sĩ (bằng cấp, kinh nghiệm, phí khám, đánh giá).
+- [x] `USER-03` [MVP] Đặt lịch khám online theo khung giờ trống.
+- [x] `USER-04` [MVP] Hủy/đổi lịch khám theo chính sách thời gian.
+- [x] `USER-05` [MVP] Nhắc lịch tự động (web/app, email, SMS, push).
 - [ ] `USER-06` [MVP] Chat tư vấn với bác sĩ trong phiên khám.
 - [ ] `USER-07` [MVP] Video call in-app với bác sĩ.
 - [ ] `USER-08` [MVP] Lưu lịch sử tư vấn (nội dung, hướng dẫn, chẩn đoán sơ bộ, đơn thuốc nếu có).
@@ -46,9 +46,9 @@
 - [ ] `DOC-01` [MVP] PHR tập trung: xem bệnh sử, xét nghiệm, đơn thuốc, timeline.
 - [ ] `DOC-02` [MVP] Quản lý kế hoạch chăm sóc định kỳ (nhắc tái khám, nhắc thuốc, follow-up).
 - [ ] `DOC-03` [MVP] Kênh liên lạc đa phương thức (chat/video) lưu trữ thành bệnh án.
-- [ ] `DOC-04` [MVP] Lịch biểu thông minh (ngày/tuần/tháng, slots đặt lịch).
+- [x] `DOC-04` [MVP] Lịch biểu thông minh (ngày/tuần/tháng, slots đặt lịch).
 - [ ] `DOC-05` [MVP] Quản lý gói dịch vụ và SLA phản hồi.
-- [ ] `DOC-06` [MVP] Quản lý lịch khám online/offline.
+- [x] `DOC-06` [MVP] Quản lý lịch khám online/offline.
 - [ ] `DOC-07` [MVP] Quản lý thu nhập cơ bản theo số ca và giờ trực.
 - [ ] `DOC-08` [POST-MVP] Dashboard theo dõi real-time ECG/SpO2 từ Ironman Holter.
 - [ ] `DOC-09` [POST-MVP] Cảnh báo tức thì khi phát hiện chỉ số bất thường.

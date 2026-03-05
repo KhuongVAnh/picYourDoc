@@ -8,8 +8,8 @@
   - ORM & DB: Prisma + MySQL (schema, migration, seed).
   - Frontend: React + Vite + TailwindCSS.
 - Trạng thái hiện tại codebase:
-  - Backend đã tách module nền tảng tại `server/src/modules/*`.
-  - Frontend đã có React Router + role layout.
+  - Backend đã có module nền tảng và module Phase 2.
+  - Frontend đã có React Router + role layout + màn hình Phase 2.
   - Tài liệu kỹ thuật: `README.md`, `docs/ARCHITECTURE.md`, `docs/CONVENTIONS.md`.
   - Checklist tính năng: `PRODUCT_FEATURES.md`.
 
@@ -52,11 +52,11 @@
 - [x] `FE-01` Setup React Router + layout theo role + TailwindCSS. Owner: Codex - 2026-03-05
 
 ### Phase 2 - Doctor Discovery & Appointments (Tuần 3-4)
-- [ ] `BE-03` API danh sách bác sĩ + filter (specialty/location/fee). Owner:
-- [ ] `BE-04` API chi tiết hồ sơ bác sĩ. Owner:
-- [ ] `BE-05` API đặt/hủy/đổi lịch với rule thời gian. Owner:
-- [ ] `FE-02` UI tìm kiếm, lọc, so sánh bác sĩ. Owner:
-- [ ] `FE-03` UI đặt/hủy/đổi lịch và lịch hẹn của bệnh nhân. Owner:
+- [x] `BE-03` API danh sách bác sĩ + filter (specialty/location/fee). Owner: Codex - 2026-03-05
+- [x] `BE-04` API chi tiết hồ sơ bác sĩ. Owner: Codex - 2026-03-05
+- [x] `BE-05` API đặt/hủy/đổi lịch với rule thời gian. Owner: Codex - 2026-03-05
+- [x] `FE-02` UI tìm kiếm, lọc, so sánh bác sĩ. Owner: Codex - 2026-03-05
+- [x] `FE-03` UI đặt/hủy/đổi lịch và lịch hẹn của bệnh nhân. Owner: Codex - 2026-03-05
 
 ### Phase 3 - Remote Consult (Tuần 5-7)
 - [ ] `BE-06` Tích hợp Socket.IO cho chat realtime. Owner:
@@ -86,8 +86,8 @@
 
 ## 5) Acceptance Criteria MVP
 - [ ] Người dùng đăng ký/đăng nhập thành công theo role.
-- [ ] Tìm được bác sĩ theo filter, xem được hồ sơ bác sĩ.
-- [ ] Đặt lịch, hủy/đổi lịch hoạt động đúng rule.
+- [x] Tìm được bác sĩ theo filter, xem được hồ sơ bác sĩ.
+- [x] Đặt lịch, hủy/đổi lịch hoạt động đúng rule.
 - [ ] Chat và video call in-app hoạt động ổn định trong LAN.
 - [ ] Lưu/xem lịch sử tư vấn và timeline sức khỏe.
 - [ ] Đăng ký gói và thanh toán giả lập ghi nhận giao dịch.
@@ -103,37 +103,43 @@
 - Ngày: 2026-03-05
 - Người cập nhật: Codex
 - Đã xong:
-  - Hoàn tất toàn bộ Phase 1 theo stack Prisma + MySQL + TailwindCSS.
-  - Tạo schema/migration/seed script cho Prisma.
-  - Tách backend module + thêm JWT/RBAC middleware.
-  - Setup React Router và layout theo role.
+  - Hoàn tất toàn bộ Phase 2 theo plan đã chốt.
+  - Mở rộng Prisma schema + migration + seed cho doctors/appointments/notifications/reminders.
+  - Implement API BE-03/BE-04/BE-05 và reminder worker in-app + email (fallback log nếu thiếu SMTP).
+  - Implement UI FE-02/FE-03: doctor listing/filter/compare, doctor detail private, create/cancel/reschedule appointments, notification panel.
+  - Chạy kiểm tra `client` lint/build + `server` prisma generate/validate + backend bootstrap.
 - Đang làm:
-  - Chuẩn bị handoff sang Phase 2.
+  - Chuẩn bị handoff sang Phase 3.
 - Kế tiếp:
-  - Bắt đầu `BE-03`, `BE-04`, `FE-02`.
+  - Bắt đầu `BE-06`, `BE-07`, `FE-04`.
 
 ## 8) Blockers / Risks
-- Mã blocker: BLK-001
-- Mô tả: `DATABASE_URL` MySQL thực tế chưa được cấu hình.
-- Ảnh hưởng: Chưa thể chạy migrate/seed thật trên môi trường local của user.
+- Mã blocker: BLK-002
+- Mô tả: Chưa chạy migrate/seed thật trên môi trường production của user.
+- Ảnh hưởng: Chưa có dữ liệu thật để QA end-to-end với DB live.
 - Cần ai quyết định: User
-- Deadline quyết định: Trước khi chạy verify integration backend với DB thật.
+- Deadline quyết định: Trước khi chuyển sang test tích hợp Phase 3.
 
 ## 9) Handoff cho agent tiếp theo
-- Task đang dở: Chưa bắt đầu Phase 2 (`BE-03`, `BE-04`, `BE-05`, `FE-02`, `FE-03`).
+- Task đang dở: Chưa bắt đầu Phase 3 (`BE-06`, `BE-07`, `BE-08`, `FE-04`, `FE-05`).
 - Bối cảnh kỹ thuật cần biết:
-  - Backend module đã scaffold, chỉ cần bổ sung business logic.
-  - Auth/RBAC đã dùng role `patient|doctor|admin`.
-  - Frontend đã có route và role layout nền.
+  - `GET /api/doctors` là public, `GET /api/doctors/:doctorId` yêu cầu JWT.
+  - Appointment hỗ trợ hybrid: slot hoặc proposal, trạng thái `REQUESTED -> CONFIRMED`.
+  - Reminder chạy mỗi phút, gửi in-app và email theo mốc 24h + 1h.
 - File đã động vào:
   - `server/src/*`
   - `server/prisma/*`
-  - `client/picYourDoc/src/*`
-  - `README.md`, `docs/*`, `PRODUCT_FEATURES.md`, `task.md`
+  - `client/src/*`
+  - `PRODUCT_FEATURES.md`, `task.md`
 - Việc tiếp theo cụ thể:
-  - Thiết kế model/bảng doctor + appointment.
-  - Implement API `BE-03/04/05`.
-  - Implement UI `FE-02/03`.
+  - Tích hợp Socket.IO cho consult room.
+  - Tích hợp signaling WebRTC cho call 1:1.
+  - Tạo chat timeline theo `consult_session`.
 - Lưu ý tránh phá vỡ API/schema/business logic:
-  - Không đổi contract auth đã tạo nếu chưa có phê duyệt.
+  - Không đổi auth contract `/api/auth/*`.
   - Không sửa migration đã có; chỉ thêm migration mới.
+
+## 11) Agent Rules
+- Khi viết hoặc sửa hàm, bắt buộc thêm comment ngắn ngay trên đầu hàm để mô tả tác dụng, các module nhỏ trong hàm cũng cần comment tác dụng.
+- Comment trong code phải dùng tiếng Việt có dấu.
+- Khi thay đổi database/schema, **không tự động tạo file migration**; user sẽ tự tạo migration.
