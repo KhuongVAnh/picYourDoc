@@ -18,6 +18,12 @@ doctorsRouter.get(
   doctorsController.getDoctorDashboard
 );
 doctorsRouter.get(
+  "/dashboard/v2",
+  authenticate,
+  authorizeRoles("doctor"),
+  doctorsController.getDoctorDashboardV2
+);
+doctorsRouter.get(
   "/patients",
   authenticate,
   authorizeRoles("doctor"),

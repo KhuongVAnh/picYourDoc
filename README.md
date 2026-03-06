@@ -37,12 +37,15 @@ npm run dev
 - `APPOINTMENT_CANCEL_WINDOW_HOURS`: Rule hủy/đổi lịch cho bệnh nhân.
 - `CLIENT_ORIGIN`: Origin frontend cho CORS/Socket.IO (mặc định `http://localhost:5173`).
 - `SMTP_*`: Cấu hình email reminder.
+- `FAMILY_DOCTOR_ADMIN_BANK_OWNER`, `FAMILY_DOCTOR_ADMIN_BANK_ACCOUNT`, `FAMILY_DOCTOR_ADMIN_BANK_NAME`: Thông tin tài khoản quản trị viên để patient chuyển khoản thuê bác sĩ gia đình.
+- `FAMILY_DOCTOR_WEEKLY_FEE`, `FAMILY_DOCTOR_MONTHLY_FEE`: Mức phí thuê bác sĩ gia đình theo tuần/tháng.
 
 ## Biến môi trường frontend
 - `VITE_API_BASE_URL`: Base URL backend (mặc định `http://localhost:3000`).
 - `VITE_WEBRTC_STUN_URLS`: Danh sách STUN server cho WebRTC.
 - `VITE_CLOUDINARY_CLOUD_NAME`: Cloud name Cloudinary.
 - `VITE_CLOUDINARY_UNSIGNED_PRESET`: Unsigned preset để upload ảnh từ client.
+- `VITE_CLOUDINARY_UNSIGNED_PRESET_RAW`: Unsigned preset cho upload PDF/raw document.
 
 ## Route structure production
 - Public:
@@ -63,7 +66,8 @@ npm run dev
 
 ## Tài khoản seed demo
 - `patient.demo@picyourdoc.local` / `Patient@123`
-- `doctor.demo@picyourdoc.local` / `Doctor@123`
+- `doctor.01@picyourdoc.local` / `Doctor@123`
+- `doctor.02@picyourdoc.local` / `Doctor@123`
 - `admin.demo@picyourdoc.local` / `Admin@123`
 
 ## Checklist test nhanh MVP
@@ -72,10 +76,13 @@ npm run dev
 3. Tìm bác sĩ -> đặt lịch -> doctor confirm lịch.
 4. Doctor start consult -> end consult.
 5. Kiểm tra patient usage + timeline và doctor income/dashboard.
+6. Chạy security smoke test ACL: `cd server && npm run test:security`.
+7. Vào `/app/patient/family-doctor`, chọn bác sĩ -> chọn gói thuê tuần/tháng -> xem thông tin chuyển khoản -> gửi yêu cầu.
 
 ## Tài liệu kỹ thuật
 - Kiến trúc: `docs/ARCHITECTURE.md`
 - Quy ước triển khai: `docs/CONVENTIONS.md`
+- Kịch bản demo Local/LAN: `docs/DEMO_LOCAL_LAN.md`
 
 ## Ràng buộc làm việc
 - Không thay đổi public API/schema/business logic đã có nếu chưa được user phê duyệt.

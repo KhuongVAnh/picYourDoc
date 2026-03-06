@@ -81,6 +81,8 @@ enum PlanCode {
   FREE
   PREMIUM
   FAMILY
+  FAMILY_DOCTOR_WEEKLY
+  FAMILY_DOCTOR_MONTHLY
 }
 
 enum SubscriptionStatus {
@@ -98,6 +100,61 @@ enum TransactionStatus {
 enum MockPaymentResult {
   SUCCESS
   FAILED
+}
+
+enum TimelineSourceType {
+  PATIENT_MANUAL
+  PATIENT_UPLOAD
+  DOCTOR_NOTE
+  SYSTEM_EVENT
+}
+
+enum AttachmentKind {
+  LAB_RESULT
+  PRESCRIPTION
+  DIAGNOSIS
+  PDF
+  IMAGE
+  OTHER
+}
+
+enum DoctorServiceType {
+  FAMILY_DOCTOR
+  ONE_TIME
+}
+
+enum RecordTagType {
+  SPECIALTY
+  DISEASE
+  CUSTOM
+}
+
+enum AppointmentRecordLinkScope {
+  TEMPORARY
+  CONSULT_ONLY
+}
+
+enum FamilyDoctorRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum DoctorIntakeStatus {
+  OPEN
+  PAUSED
+}
+
+enum FamilyDoctorBillingCycle {
+  WEEKLY
+  MONTHLY
+}
+
+enum FamilyDoctorPaymentStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
 }
 
 model User {
@@ -124,6 +181,10 @@ model User {
   paymentTransactions    PaymentTransaction[]
   doctorIncomeLedgers    DoctorIncomeLedger[] @relation("DoctorIncomeAsDoctor")
   patientIncomeLedgers   DoctorIncomeLedger[] @relation("DoctorIncomeAsPatient")
+  createdRecordTags      RecordTag[]          @relation("CreatedRecordTags")
+  createdRecordLinks     AppointmentRecordLink[] @relation("CreatedRecordLinks")
+  familyDoctorRequestsAsPatient FamilyDoctorRequest[] @relation("FamilyDoctorRequestsAsPatient")
+  familyDoctorRequestsAsDoctor  FamilyDoctorRequest[] @relation("FamilyDoctorRequestsAsDoctorUser")
 
   @@map("users")
 }
@@ -142,6 +203,9 @@ model DoctorProfile {
   reviewCount        Int       @default(0) @map("review_count")
   insurancesAccepted Json      @map("insurances_accepted")
   isActive           Boolean   @default(true) @map("is_active")
+  intakeStatus       DoctorIntakeStatus @default(OPEN) @map("intake_status")
+  maxFamilySlots     Int       @default(30) @map("max_family_slots")
+  activeFamilyCount  Int       @default(0) @map("active_family_count")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -149,6 +213,7 @@ model DoctorProfile {
   slots                 DoctorSlot[]
   appointments          Appointment[]      @relation("DoctorAppointments")
   assignedSubscriptions UserSubscription[] @relation("AssignedDoctorSubscriptions")
+  familyDoctorRequests  FamilyDoctorRequest[]
 
   @@map("doctor_profiles")
 }
@@ -182,6 +247,7 @@ model Appointment {
   cancelReason     String?               @map("cancel_reason")
   rescheduleReason String?               @map("reschedule_reason")
   conflictFlag     Boolean               @default(false) @map("conflict_flag")
+  serviceType      DoctorServiceType     @default(ONE_TIME) @map("service_type")
   slotId           String?               @map("slot_id")
   confirmedAt      DateTime?             @map("confirmed_at")
   cancelledAt      DateTime?             @map("cancelled_at")
@@ -194,6 +260,7 @@ model Appointment {
   reminderLogs  ReminderLog[]
   consultSession ConsultSession?
   timelineEntries TimelineEntry[]
+  sharedRecords AppointmentRecordLink[]
 
   @@index([doctorId, status, startAt, endAt], map: "appointments_doctor_status_time_idx")
   @@index([patientUserId, status, startAt], map: "appointments_patient_status_time_idx")
@@ -296,6 +363,11 @@ model TimelineEntry {
   appointmentId   String?         @map("appointment_id")
   consultSessionId String?        @map("consult_session_id")
   doctorUserId    String?         @map("doctor_user_id")
+  sourceType      TimelineSourceType @default(PATIENT_MANUAL) @map("source_type")
+  serviceType     DoctorServiceType? @map("service_type")
+  diagnosis       String?
+  specialtyCode   String?         @map("specialty_code")
+  visibility      String          @default("PRIVATE_TO_PATIENT_AND_FAMILY_DOCTOR")
   entryType       RecordEntryType @map("entry_type")
   title           String
   summary         String
@@ -307,6 +379,9 @@ model TimelineEntry {
   appointment   Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   consultSession ConsultSession? @relation(fields: [consultSessionId], references: [id], onDelete: SetNull)
   doctor        User?           @relation("DoctorTimelineEntries", fields: [doctorUserId], references: [id], onDelete: SetNull)
+  attachments   TimelineAttachment[]
+  tags          TimelineEntryTag[]
+  sharedLinks   AppointmentRecordLink[]
 
   @@index([memberId, createdAt], map: "timeline_entries_member_created_idx")
   @@index([doctorUserId, createdAt], map: "timeline_entries_doctor_created_idx")
@@ -369,9 +444,110 @@ model UserSubscription {
   assignedDoctorProfile DoctorProfile?   @relation("AssignedDoctorSubscriptions", fields: [assignedDoctorProfileId], references: [id], onDelete: SetNull)
   transactions         PaymentTransaction[]
   usageCounters        UsageCounterMonthly[]
+  familyDoctorRequests FamilyDoctorRequest[]
 
   @@index([userId, status], map: "user_subscriptions_user_status_idx")
   @@map("user_subscriptions")
+}
+
+model TimelineAttachment {
+  id            String         @id @default(cuid())
+  timelineEntryId String       @map("timeline_entry_id")
+  fileName      String         @map("file_name")
+  fileUrl       String         @map("file_url")
+  mimeType      String         @map("mime_type")
+  fileSizeBytes Int            @map("file_size_bytes")
+  kind          AttachmentKind
+  provider      String         @default("cloudinary")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  timelineEntry TimelineEntry @relation(fields: [timelineEntryId], references: [id], onDelete: Cascade)
+
+  @@index([timelineEntryId, createdAt], map: "timeline_attachments_entry_created_idx")
+  @@map("timeline_attachments")
+}
+
+model RecordTag {
+  id              String        @id @default(cuid())
+  type            RecordTagType
+  code            String?
+  label           String
+  createdByUserId String?       @map("created_by_user_id")
+  isActive        Boolean       @default(true) @map("is_active")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  createdBy User? @relation("CreatedRecordTags", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  timelineEntries TimelineEntryTag[]
+
+  @@unique([type, code])
+  @@index([type, label], map: "record_tags_type_label_idx")
+  @@map("record_tags")
+}
+
+model TimelineEntryTag {
+  id            String   @id @default(cuid())
+  timelineEntryId String @map("timeline_entry_id")
+  tagId         String   @map("tag_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  timelineEntry TimelineEntry @relation(fields: [timelineEntryId], references: [id], onDelete: Cascade)
+  tag           RecordTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([timelineEntryId, tagId])
+  @@index([tagId, createdAt], map: "timeline_entry_tags_tag_created_idx")
+  @@map("timeline_entry_tags")
+}
+
+model AppointmentRecordLink {
+  id            String   @id @default(cuid())
+  appointmentId String   @map("appointment_id")
+  timelineEntryId String @map("timeline_entry_id")
+  scope         AppointmentRecordLinkScope @default(TEMPORARY)
+  expiresAt     DateTime? @map("expires_at")
+  createdByUserId String @map("created_by_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  timelineEntry TimelineEntry @relation(fields: [timelineEntryId], references: [id], onDelete: Cascade)
+  createdBy     User @relation("CreatedRecordLinks", fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([appointmentId, timelineEntryId])
+  @@index([appointmentId, createdAt], map: "appointment_record_links_appt_created_idx")
+  @@map("appointment_record_links")
+}
+
+model FamilyDoctorRequest {
+  id               String                    @id @default(cuid())
+  patientUserId    String                    @map("patient_user_id")
+  doctorProfileId  String                    @map("doctor_profile_id")
+  doctorUserId     String                    @map("doctor_user_id")
+  userSubscriptionId String?                 @map("user_subscription_id")
+  billingCycle     FamilyDoctorBillingCycle  @default(MONTHLY) @map("billing_cycle")
+  billingAmount    Decimal                   @default(0) @map("billing_amount") @db.Decimal(10, 2)
+  paymentStatus    FamilyDoctorPaymentStatus @default(PENDING_VERIFICATION) @map("payment_status")
+  paymentReference String?                   @map("payment_reference")
+  paymentConfirmedAt DateTime?               @map("payment_confirmed_at")
+  contractStartsAt DateTime?                 @map("contract_starts_at")
+  contractEndsAt   DateTime?                 @map("contract_ends_at")
+  status           FamilyDoctorRequestStatus @default(PENDING)
+  requestNote      String?                   @map("request_note")
+  responseNote     String?                   @map("response_note")
+  requestedAt      DateTime                  @default(now()) @map("requested_at")
+  respondedAt      DateTime?                 @map("responded_at")
+  createdAt        DateTime                  @default(now()) @map("created_at")
+  updatedAt        DateTime                  @updatedAt @map("updated_at")
+
+  patient       User            @relation("FamilyDoctorRequestsAsPatient", fields: [patientUserId], references: [id], onDelete: Cascade)
+  doctorProfile DoctorProfile   @relation(fields: [doctorProfileId], references: [id], onDelete: Cascade)
+  doctorUser    User            @relation("FamilyDoctorRequestsAsDoctorUser", fields: [doctorUserId], references: [id], onDelete: Cascade)
+  subscription  UserSubscription? @relation(fields: [userSubscriptionId], references: [id], onDelete: SetNull)
+
+  @@index([userSubscriptionId], map: "family_doctor_requests_subscription_idx")
+  @@index([doctorProfileId, status, requestedAt], map: "family_doctor_requests_doctor_status_idx")
+  @@index([patientUserId, status, requestedAt], map: "family_doctor_requests_patient_status_idx")
+  @@index([patientUserId, doctorProfileId, status], map: "family_doctor_requests_patient_doctor_status_idx")
+  @@map("family_doctor_requests")
 }
 
 model PaymentTransaction {

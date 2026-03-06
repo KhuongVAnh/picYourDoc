@@ -10,6 +10,9 @@ const {
 const {
   subscriptionsRouter,
 } = require("../modules/subscriptions/subscriptions.routes");
+const {
+  familyDoctorRouter,
+} = require("../modules/family-doctor/family-doctor.routes");
 
 const apiRouter = Router();
 
@@ -20,5 +23,6 @@ apiRouter.use("/consults", consultsRouter);
 apiRouter.use("/records", recordsRouter);
 apiRouter.use("/notifications", notificationsRouter);
 apiRouter.use("/subscriptions", subscriptionsRouter);
+apiRouter.use("/family-doctor", familyDoctorRouter);
 
 module.exports = { apiRouter };

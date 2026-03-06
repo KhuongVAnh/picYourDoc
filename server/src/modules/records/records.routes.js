@@ -52,8 +52,33 @@ recordsRouter.get(
 );
 recordsRouter.post(
   "/members/:memberId/timeline",
-  authorizeRoles("doctor", "admin"),
+  authorizeRoles("patient", "doctor", "admin"),
   recordsController.createTimelineNote
+);
+recordsRouter.patch(
+  "/timeline/:entryId",
+  authorizeRoles("patient", "doctor", "admin"),
+  recordsController.updateTimelineEntry
+);
+recordsRouter.get(
+  "/members/:memberId/documents",
+  authorizeRoles("patient", "doctor", "admin"),
+  recordsController.getMemberDocuments
+);
+recordsRouter.post(
+  "/appointments/:appointmentId/share",
+  authorizeRoles("patient"),
+  recordsController.shareRecordsForAppointment
+);
+recordsRouter.get(
+  "/appointments/:appointmentId/shared",
+  authorizeRoles("patient", "doctor", "admin"),
+  recordsController.getSharedRecordsForAppointment
+);
+recordsRouter.delete(
+  "/appointments/:appointmentId/shared/:linkId",
+  authorizeRoles("patient"),
+  recordsController.revokeSharedRecordForAppointment
 );
 recordsRouter.get(
   "/members/:memberId/care-plan",

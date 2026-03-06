@@ -79,8 +79,8 @@
 - [x] `BE-14` API dashboard bác sĩ (lịch, bệnh nhân, follow-up). Owner: Codex - 2026-03-05
 - [x] `FE-09` UI dashboard bác sĩ bản cơ bản. Owner: Codex - 2026-03-05
 - [x] `QA-01` Test end-to-end cho các luồng chính. Owner: Codex - 2026-03-05
-- [ ] `QA-02` Kiểm tra bảo mật cơ bản (RBAC, access boundaries). Owner:
-- [ ] `DOC-02` Chuẩn bị kịch bản demo Local/LAN + seed data. Owner:
+- [x] `QA-02` Kiểm tra bảo mật cơ bản (RBAC, access boundaries). Owner: Codex - 2026-03-06
+- [x] `DOC-02` Chuẩn bị kịch bản demo Local/LAN + seed data. Owner: Codex - 2026-03-06
 
 ## 5) Acceptance Criteria MVP
 - [x] Người dùng đăng ký/đăng nhập thành công theo role.
@@ -120,6 +120,48 @@
   - Hoàn thiện `DOC-02` (kịch bản demo Local/LAN + seed account + script test nhanh).
   - Chốt QA-02 và cập nhật checklist cuối cùng.
 
+### Cập nhật bổ sung - 2026-03-06
+- Ngày: 2026-03-06
+- Người cập nhật: Codex
+- Đã xong:
+  - Vá ACL cho API `GET /api/doctors/patients/:memberId/overview`:
+    - Phân biệt `accessScope=full|limited` theo family doctor contract.
+    - One-time doctor chỉ xem timeline theo appointment/share, không xem full `healthProfile` và `carePlan`.
+  - Khắc phục timeout transaction ở `records.service` khi tạo/cập nhật timeline có tag/attachments.
+  - Hoàn thành `QA-02`:
+    - Thêm script `server/smoke.security.test.js`.
+    - Chạy pass: `npm run test:security`.
+  - Hoàn thành `DOC-02`:
+    - Thêm tài liệu `docs/DEMO_LOCAL_LAN.md` với checklist demo và checklist ACL.
+    - Cập nhật `README.md` (seed account + lệnh test bảo mật + link tài liệu demo).
+- Đang làm:
+  - Không có task mở trong phạm vi MVP đã chốt.
+- Kế tiếp:
+  - Nếu mở phase mới, tạo task ID mới trong checklist trước khi code để các agent khác bám theo.
+
+### Cập nhật bổ sung - 2026-03-06 (Family Doctor Payment Flow)
+- Ngày: 2026-03-06
+- Người cập nhật: Codex
+- Đã xong:
+  - Đổi nghiệp vụ thuê bác sĩ gia đình:
+    - Không còn yêu cầu patient phải có subscription `FAMILY_DOCTOR_WEEKLY`/`FAMILY_DOCTOR_MONTHLY` để gửi request.
+    - Thêm luồng thanh toán thủ công theo chu kỳ `WEEKLY`/`MONTHLY` với mức phí khác nhau.
+    - Cho phép patient thuê nhiều bác sĩ gia đình cùng lúc.
+  - Backend:
+    - Thêm API `GET /api/family-doctor/pricing` trả thông tin STK quản trị viên + bảng giá tuần/tháng.
+    - Refactor `POST /api/family-doctor/requests` sang payload mới: `doctorProfileId`, `billingCycle`, `paymentReference`, `requestNote`.
+    - Refactor ACL nhận diện family doctor theo `FamilyDoctorRequest` đã duyệt (không theo subscription assigned doctor cũ).
+    - Cập nhật `appointments`, `records`, `doctors` để đồng bộ service type/overview/dashboard theo hợp đồng family doctor mới.
+  - Frontend:
+    - Redesign trang `/app/patient/family-doctor` theo luồng chọn bác sĩ -> xem thông tin chuyển khoản -> chọn thuê tuần/tháng -> gửi yêu cầu.
+    - Cập nhật trang doctor settings/dashboard để hiển thị dữ liệu request/hợp đồng theo `billingCycle`, `billingAmount`, `contractEndsAt`.
+  - Cấu hình:
+    - Thêm env backend cho thông tin tài khoản chuyển khoản và mức phí thuê tuần/tháng.
+- Đang làm:
+  - Chờ user tạo migration + chạy migrate để đồng bộ DB với schema mới.
+- Kế tiếp:
+  - Sau khi user migrate + generate Prisma client, chạy lại `npm run test:security` để xác nhận regression pass với schema mới.
+
 ## 8) Blockers / Risks
 - Mã blocker: Không có blocker đang mở.
 - Mô tả: `BLK-004` đã được gỡ sau khi user migrate + generate Prisma client.
@@ -129,7 +171,7 @@
 
 ## 9) Handoff cho agent tiếp theo
 - Task đang dở:
-  - `QA-02`, `DOC-02`.
+  - Không có task MVP đang dở.
 - Bối cảnh kỹ thuật cần biết:
   - Gating đã được gắn vào consult start (`quota theo tháng`) và family member create (`familyMemberLimit`).
   - Settlement khi end consult đã ghi `UsageCounterMonthly` và `DoctorIncomeLedger`.
@@ -153,9 +195,8 @@
   - `client/src/components/ConsultRoom.jsx`
   - `client/src/pages/*` (đã thêm đầy đủ page Patient + Doctor trong phạm vi MVP)
 - Việc tiếp theo cụ thể:
-  - Thực hiện `QA-02` theo checklist bảo mật (IDOR, role escalation, cross-family data leak).
-  - Hoàn thiện `DOC-02` và chuẩn hóa script demo Local/LAN.
-  - Tick `QA-02`, `DOC-02` khi hoàn thành.
+  - Khi thêm nghiệp vụ mới, ưu tiên mở rộng additive, giữ nguyên contract API cũ.
+  - Chạy lại `npm run test:security` sau mỗi thay đổi ảnh hưởng ACL.
 - Lưu ý tránh phá vỡ API/schema/business logic:
   - Không thay đổi API auth/appointments/doctors đã có.
   - Không sửa migration cũ; chỉ thêm migration mới do user tạo.

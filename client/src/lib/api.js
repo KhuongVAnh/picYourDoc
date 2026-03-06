@@ -83,6 +83,11 @@ function getDoctorDashboardApi(query, accessToken) {
   return apiRequest("/api/doctors/dashboard", { query, accessToken });
 }
 
+// API lấy dashboard v2 cho bác sĩ với 3 vùng quản trị.
+function getDoctorDashboardV2Api(query, accessToken) {
+  return apiRequest("/api/doctors/dashboard/v2", { query, accessToken });
+}
+
 // API lấy danh sách bệnh nhân doctor đang theo dõi.
 function getDoctorPatientsApi(query, accessToken) {
   return apiRequest("/api/doctors/patients", { query, accessToken });
@@ -247,6 +252,47 @@ function createTimelineNoteApi(memberId, payload, accessToken) {
   });
 }
 
+// API cập nhật timeline entry theo quyền patient/doctor/admin.
+function updateTimelineEntryApi(entryId, payload, accessToken) {
+  return apiRequest(`/api/records/timeline/${entryId}`, {
+    method: "PATCH",
+    body: payload,
+    accessToken,
+  });
+}
+
+// API lấy danh sách tài liệu hồ sơ theo member.
+function getMemberDocumentsApi(memberId, query, accessToken) {
+  return apiRequest(`/api/records/members/${memberId}/documents`, {
+    query,
+    accessToken,
+  });
+}
+
+// API chia sẻ hồ sơ tạm cho appointment one-time.
+function shareRecordsForAppointmentApi(appointmentId, payload, accessToken) {
+  return apiRequest(`/api/records/appointments/${appointmentId}/share`, {
+    method: "POST",
+    body: payload,
+    accessToken,
+  });
+}
+
+// API lấy danh sách hồ sơ đã chia sẻ cho appointment.
+function getSharedRecordsForAppointmentApi(appointmentId, accessToken) {
+  return apiRequest(`/api/records/appointments/${appointmentId}/shared`, {
+    accessToken,
+  });
+}
+
+// API thu hồi một record link đã chia sẻ.
+function revokeSharedRecordForAppointmentApi(appointmentId, linkId, accessToken) {
+  return apiRequest(`/api/records/appointments/${appointmentId}/shared/${linkId}`, {
+    method: "DELETE",
+    accessToken,
+  });
+}
+
 // API lấy care plan của member.
 function getCarePlanApi(memberId, accessToken) {
   return apiRequest(`/api/records/members/${memberId}/care-plan`, {
@@ -306,6 +352,61 @@ function cancelSubscriptionApi(accessToken) {
   });
 }
 
+// API lấy marketplace bác sĩ gia đình đang mở nhận bệnh nhân.
+function getFamilyDoctorMarketplaceApi(query, accessToken) {
+  return apiRequest("/api/family-doctor/marketplace", { query, accessToken });
+}
+
+// API lấy thông tin bảng giá và tài khoản chuyển khoản cho luồng thuê bác sĩ gia đình.
+function getFamilyDoctorPricingApi(accessToken) {
+  return apiRequest("/api/family-doctor/pricing", { accessToken });
+}
+
+// API patient gửi yêu cầu gán bác sĩ gia đình.
+function createFamilyDoctorRequestApi(payload, accessToken) {
+  return apiRequest("/api/family-doctor/requests", {
+    method: "POST",
+    body: payload,
+    accessToken,
+  });
+}
+
+// API patient lấy danh sách request bác sĩ gia đình của mình.
+function getMyFamilyDoctorRequestsApi(accessToken) {
+  return apiRequest("/api/family-doctor/requests/me", { accessToken });
+}
+
+// API doctor lấy danh sách request incoming.
+function getIncomingFamilyDoctorRequestsApi(query, accessToken) {
+  return apiRequest("/api/family-doctor/requests/incoming", {
+    query,
+    accessToken,
+  });
+}
+
+// API doctor phản hồi request approve/reject.
+function respondFamilyDoctorRequestApi(requestId, payload, accessToken) {
+  return apiRequest(`/api/family-doctor/requests/${requestId}/respond`, {
+    method: "PATCH",
+    body: payload,
+    accessToken,
+  });
+}
+
+// API doctor cập nhật trạng thái intake OPEN/PAUSED.
+function updateDoctorIntakeStatusApi(payload, accessToken) {
+  return apiRequest("/api/family-doctor/intake", {
+    method: "PATCH",
+    body: payload,
+    accessToken,
+  });
+}
+
+// API patient lấy hợp đồng bác sĩ gia đình hiện tại.
+function getMyFamilyDoctorContractApi(accessToken) {
+  return apiRequest("/api/family-doctor/contract/me", { accessToken });
+}
+
 export {
   API_BASE_URL,
   apiRequest,
@@ -316,6 +417,7 @@ export {
   getDoctorsApi,
   getDoctorDetailApi,
   getDoctorDashboardApi,
+  getDoctorDashboardV2Api,
   getDoctorPatientsApi,
   getDoctorPatientOverviewApi,
   getDoctorIncomeApi,
@@ -338,6 +440,11 @@ export {
   upsertHealthProfileApi,
   getMemberTimelineApi,
   createTimelineNoteApi,
+  updateTimelineEntryApi,
+  getMemberDocumentsApi,
+  shareRecordsForAppointmentApi,
+  getSharedRecordsForAppointmentApi,
+  revokeSharedRecordForAppointmentApi,
   getCarePlanApi,
   upsertCarePlanApi,
   getSubscriptionPlansApi,
@@ -346,4 +453,12 @@ export {
   getSubscriptionTransactionsApi,
   getSubscriptionUsageApi,
   cancelSubscriptionApi,
+  getFamilyDoctorPricingApi,
+  getFamilyDoctorMarketplaceApi,
+  createFamilyDoctorRequestApi,
+  getMyFamilyDoctorRequestsApi,
+  getIncomingFamilyDoctorRequestsApi,
+  respondFamilyDoctorRequestApi,
+  updateDoctorIntakeStatusApi,
+  getMyFamilyDoctorContractApi,
 };

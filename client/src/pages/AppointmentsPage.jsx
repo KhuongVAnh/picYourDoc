@@ -1,6 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { cancelAppointmentApi, getAppointmentsApi } from "../lib/api";
+import {
+  cancelAppointmentApi,
+  getAppointmentsApi,
+  getSharedRecordsForAppointmentApi,
+  revokeSharedRecordForAppointmentApi,
+  shareRecordsForAppointmentApi,
+} from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime, getHoursUntil } from "../lib/date";
 import { ROUTES } from "../lib/routes";
@@ -29,6 +35,9 @@ export function AppointmentsPage() {
   const [appointments, setAppointments] = useState([]);
   const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sharingAppointmentId, setSharingAppointmentId] = useState("");
+  const [timelineEntryIdsInput, setTimelineEntryIdsInput] = useState("");
+  const [sharedRecords, setSharedRecords] = useState([]);
   const [error, setError] = useState("");
 
   // Tải danh sách lịch hẹn theo bộ lọc trạng thái hiện tại.
@@ -105,6 +114,70 @@ export function AppointmentsPage() {
       rescheduleOf: appointment.id,
     });
     navigate(`${ROUTES.app.patient.appointmentNew}?${search.toString()}`);
+  }
+
+  // Parse chuỗi ID timeline thành mảng để gửi API share record.
+  function parseTimelineEntryIds(value) {
+    return String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+
+  // Mở panel chia sẻ hồ sơ cho một appointment và tải dữ liệu đã share.
+  async function handleOpenSharePanel(appointmentId) {
+    try {
+      setError("");
+      setSharingAppointmentId(appointmentId);
+      setTimelineEntryIdsInput("");
+      const response = await getSharedRecordsForAppointmentApi(appointmentId, accessToken);
+      setSharedRecords(response.data || []);
+    } catch (apiError) {
+      setError(apiError.message || "Không thể tải danh sách hồ sơ đã chia sẻ.");
+    }
+  }
+
+  // Gửi yêu cầu chia sẻ hồ sơ tạm cho appointment one-time.
+  async function handleShareRecords() {
+    if (!sharingAppointmentId) {
+      return;
+    }
+    const timelineEntryIds = parseTimelineEntryIds(timelineEntryIdsInput);
+    if (timelineEntryIds.length === 0) {
+      setError("Vui lòng nhập ít nhất một timelineEntryId để chia sẻ.");
+      return;
+    }
+
+    try {
+      setError("");
+      const response = await shareRecordsForAppointmentApi(
+        sharingAppointmentId,
+        {
+          timelineEntryIds,
+          scope: "TEMPORARY",
+        },
+        accessToken
+      );
+      setSharedRecords(response.data || []);
+      setTimelineEntryIdsInput("");
+    } catch (apiError) {
+      setError(apiError.message || "Không thể chia sẻ hồ sơ.");
+    }
+  }
+
+  // Thu hồi một hồ sơ đã chia sẻ cho appointment.
+  async function handleRevokeSharedRecord(linkId) {
+    if (!sharingAppointmentId) {
+      return;
+    }
+    try {
+      setError("");
+      await revokeSharedRecordForAppointmentApi(sharingAppointmentId, linkId, accessToken);
+      const response = await getSharedRecordsForAppointmentApi(sharingAppointmentId, accessToken);
+      setSharedRecords(response.data || []);
+    } catch (apiError) {
+      setError(apiError.message || "Không thể thu hồi hồ sơ đã chia sẻ.");
+    }
   }
 
   return (
@@ -186,6 +259,13 @@ export function AppointmentsPage() {
                   Vào phòng tư vấn
                 </Link>
               ) : null}
+              <button
+                className="btn-soft px-3 py-2 text-sm"
+                onClick={() => handleOpenSharePanel(appointment.id)}
+                type="button"
+              >
+                Chia sẻ hồ sơ
+              </button>
             </div>
 
             {!appointment.canPatientUpdate && ["REQUESTED", "CONFIRMED"].includes(appointment.status) ? (
@@ -196,6 +276,63 @@ export function AppointmentsPage() {
           </article>
         ))}
       </div>
+
+      {sharingAppointmentId ? (
+        <article className="surface-card p-4">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-base font-semibold text-slate-900">Chia sẻ hồ sơ cho lịch hẹn</h3>
+            <button
+              className="btn-soft px-3 py-1.5 text-xs"
+              onClick={() => {
+                setSharingAppointmentId("");
+                setTimelineEntryIdsInput("");
+                setSharedRecords([]);
+              }}
+              type="button"
+            >
+              Đóng
+            </button>
+          </div>
+          <p className="text-xs text-slate-500">
+            Nhập danh sách `timelineEntryId` phân tách bằng dấu phẩy để chia sẻ tạm thời cho lịch hẹn này.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <input
+              className="input-base min-w-[320px] flex-1"
+              onChange={(event) => setTimelineEntryIdsInput(event.target.value)}
+              placeholder="Ví dụ: cmabc123,cmxyz456"
+              value={timelineEntryIdsInput}
+            />
+            <button className="btn-primary px-4 py-2 text-sm" onClick={handleShareRecords} type="button">
+              Chia sẻ
+            </button>
+          </div>
+
+          {sharedRecords.length > 0 ? (
+            <div className="mt-3 grid gap-2">
+              {sharedRecords.map((row) => (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3" key={row.id}>
+                  <p className="text-sm font-semibold text-slate-900">
+                    {row.timelineEntry?.title || "Timeline entry"}
+                  </p>
+                  <p className="text-xs text-slate-600">
+                    Scope: {row.scope} • Hết hạn: {row.expiresAt ? formatDateTime(row.expiresAt) : "Không đặt"}
+                  </p>
+                  <button
+                    className="btn-soft mt-2 px-3 py-1 text-xs"
+                    onClick={() => handleRevokeSharedRecord(row.id)}
+                    type="button"
+                  >
+                    Thu hồi
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">Chưa có hồ sơ nào được chia sẻ.</p>
+          )}
+        </article>
+      ) : null}
     </section>
   );
 }

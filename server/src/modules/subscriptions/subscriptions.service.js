@@ -5,7 +5,14 @@ const PLAN_INCOME_AMOUNT_MAP = {
   FREE: 0,
   PREMIUM: 120000,
   FAMILY: 100000,
+  FAMILY_DOCTOR_WEEKLY: 120000,
+  FAMILY_DOCTOR_MONTHLY: 100000,
 };
+
+const FAMILY_DOCTOR_PLAN_CODES = new Set([
+  "FAMILY_DOCTOR_WEEKLY",
+  "FAMILY_DOCTOR_MONTHLY",
+]);
 
 // Tạo lỗi HTTP chuẩn để đồng bộ cách trả lỗi giữa các service.
 function createHttpError(message, statusCode) {
@@ -24,6 +31,26 @@ function toMonthKey(dateValue = new Date()) {
 function buildReferenceCode(prefix = "TXN") {
   const random = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `${prefix}-${Date.now()}-${random}`;
+}
+
+// Giải phóng slot nhận bệnh nhân của bác sĩ khi subscription family doctor kết thúc/hủy.
+async function releaseDoctorCapacityForSubscriptions(subscriptions = [], tx = prisma) {
+  for (const subscription of subscriptions) {
+    if (
+      subscription.assignedDoctorProfileId &&
+      FAMILY_DOCTOR_PLAN_CODES.has(subscription.plan?.code)
+    ) {
+      await tx.doctorProfile.updateMany({
+        where: {
+          id: subscription.assignedDoctorProfileId,
+          activeFamilyCount: { gt: 0 },
+        },
+        data: {
+          activeFamilyCount: { decrement: 1 },
+        },
+      });
+    }
+  }
 }
 
 // Lấy plan FREE làm mặc định fallback khi user chưa mua gói.
@@ -164,6 +191,16 @@ async function checkoutMock({ userId, payload }) {
 
   return prisma.$transaction(async (tx) => {
     if (mockResult === "SUCCESS") {
+      const currentActiveSubscriptions = await tx.userSubscription.findMany({
+        where: {
+          userId,
+          status: "ACTIVE",
+        },
+        include: {
+          plan: true,
+        },
+      });
+
       // Đóng các subscription active cũ trước khi kích hoạt gói mới.
       await tx.userSubscription.updateMany({
         where: {
@@ -176,6 +213,7 @@ async function checkoutMock({ userId, payload }) {
           updatedAt: now,
         },
       });
+      await releaseDoctorCapacityForSubscriptions(currentActiveSubscriptions, tx);
 
       const subscription = await tx.userSubscription.create({
         data: {
@@ -334,12 +372,17 @@ async function cancelSubscription(userId) {
     throw createHttpError("No active subscription to cancel", 404);
   }
 
-  const updated = await prisma.userSubscription.update({
-    where: { id: activeSubscription.id },
-    data: {
-      status: "CANCELLED",
-      autoRenew: false,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const saved = await tx.userSubscription.update({
+      where: { id: activeSubscription.id },
+      data: {
+        status: "CANCELLED",
+        autoRenew: false,
+      },
+    });
+
+    await releaseDoctorCapacityForSubscriptions([activeSubscription], tx);
+    return saved;
   });
 
   return { data: updated };

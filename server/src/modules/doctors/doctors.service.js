@@ -32,6 +32,24 @@ function parseDateRange(query = {}) {
   return { from, to };
 }
 
+// Parse khung thời gian cho dashboard v2 theo week/month.
+function parseDashboardV2Range(query = {}) {
+  const now = new Date();
+  const range = query.range === "month" ? "month" : "week";
+  const from = query.from ? new Date(query.from) : now;
+  const to = query.to
+    ? new Date(query.to)
+    : new Date(now.getTime() + (range === "month" ? 30 : 7) * 24 * 60 * 60 * 1000);
+
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    const error = new Error("Invalid dashboard range");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return { range, from, to };
+}
+
 // Lấy hồ sơ doctor profile theo userId và ném lỗi khi không tồn tại.
 async function getDoctorProfileByUserIdOrFail(userId) {
   const doctorProfile = await prisma.doctorProfile.findUnique({
@@ -54,8 +72,8 @@ async function getDoctorProfileByUserIdOrFail(userId) {
   return doctorProfile;
 }
 
-// Kiểm tra doctor có quyền truy cập member thông qua lịch điều trị hay không.
-async function ensureDoctorCanAccessMember(doctorUserId, memberId) {
+// Lấy ngữ cảnh quyền truy cập bệnh nhân của bác sĩ: full (family doctor) hoặc limited (one-time).
+async function resolveDoctorMemberAccess(doctorUserId, memberId) {
   const member = await prisma.familyMember.findUnique({
     where: { id: memberId },
     include: {
@@ -71,23 +89,47 @@ async function ensureDoctorCanAccessMember(doctorUserId, memberId) {
     throw error;
   }
 
-  const count = await prisma.appointment.count({
+  const ownerUserId = member.familyProfile.ownerUserId;
+
+  // Lấy toàn bộ appointment liên quan để xác định one-time doctor có quyền đọc giới hạn.
+  const appointments = await prisma.appointment.findMany({
     where: {
-      patientUserId: member.familyProfile.ownerUserId,
+      patientUserId: ownerUserId,
       doctor: { userId: doctorUserId },
       status: {
         in: ["REQUESTED", "CONFIRMED", "COMPLETED", "RESCHEDULED"],
       },
     },
+    select: {
+      id: true,
+    },
   });
 
-  if (count === 0) {
+  // Kiểm tra bác sĩ có đang được gán family doctor active cho chủ hồ sơ hay không.
+  const activeFamilyContract = await prisma.familyDoctorRequest.findFirst({
+    where: {
+      patientUserId: ownerUserId,
+      doctorUserId,
+      status: "APPROVED",
+      contractStartsAt: { lte: new Date() },
+      contractEndsAt: { gt: new Date() },
+    },
+    select: { id: true },
+  });
+
+  const appointmentIds = appointments.map((item) => item.id);
+  const scope = activeFamilyContract ? "full" : "limited";
+  if (!activeFamilyContract && appointmentIds.length === 0) {
     const error = new Error("Forbidden");
     error.statusCode = 403;
     throw error;
   }
 
-  return member;
+  return {
+    member,
+    scope,
+    appointmentIds,
+  };
 }
 
 // Lấy danh sách bác sĩ public có filter/sort/pagination.
@@ -460,28 +502,67 @@ async function getDoctorPatientOverview({ user, memberId }) {
     throw error;
   }
 
-  const member = await ensureDoctorCanAccessMember(user.userId, memberId);
+  const access = await resolveDoctorMemberAccess(user.userId, memberId);
+
+  // Family doctor được xem full timeline; one-time doctor chỉ xem record thuộc appointment/share còn hạn.
+  const timelineWhere =
+    access.scope === "full"
+      ? { memberId: access.member.id }
+      : {
+          memberId: access.member.id,
+          OR: [
+            {
+              appointmentId: {
+                in: access.appointmentIds,
+              },
+            },
+            {
+              sharedLinks: {
+                some: {
+                  appointmentId: {
+                    in: access.appointmentIds,
+                  },
+                  OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+                },
+              },
+            },
+          ],
+        };
+
   const [healthProfile, timeline, carePlan] = await Promise.all([
-    prisma.healthProfile.findUnique({
-      where: { memberId: member.id },
-    }),
+    access.scope === "full"
+      ? prisma.healthProfile.findUnique({
+          where: { memberId: access.member.id },
+        })
+      : Promise.resolve(null),
     prisma.timelineEntry.findMany({
-      where: { memberId: member.id },
+      where: timelineWhere,
+      include: {
+        attachments: {
+          orderBy: { createdAt: "asc" },
+        },
+        tags: {
+          include: { tag: true },
+        },
+      },
       orderBy: { createdAt: "desc" },
       take: 30,
     }),
-    prisma.carePlan.findFirst({
-      where: {
-        memberId: member.id,
-        doctorId: user.userId,
-      },
-      orderBy: { updatedAt: "desc" },
-    }),
+    access.scope === "full"
+      ? prisma.carePlan.findFirst({
+          where: {
+            memberId: access.member.id,
+            doctorId: user.userId,
+          },
+          orderBy: { updatedAt: "desc" },
+        })
+      : Promise.resolve(null),
   ]);
 
   return {
     data: {
-      member,
+      member: access.member,
+      accessScope: access.scope,
       healthProfile,
       timeline,
       carePlan,
@@ -540,6 +621,182 @@ async function getDoctorIncome({ user, query }) {
   };
 }
 
+// Lấy dashboard v2 cho bác sĩ với 3 vùng quản trị: monitoring, family-doctor, one-time.
+async function getDoctorDashboardV2({ user, query }) {
+  if (user.role !== "doctor") {
+    const error = new Error("Only doctor can access doctor dashboard");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const doctorProfile = await getDoctorProfileByUserIdOrFail(user.userId);
+  const { range, from, to } = parseDashboardV2Range(query);
+  const serviceTypeFilter = query.serviceType || "all";
+  const statusFilter = query.status || null;
+  const tagFilter = query.tag?.trim() || null;
+
+  const appointmentWhere = {
+    doctorId: doctorProfile.id,
+    startAt: {
+      gte: from,
+      lte: to,
+    },
+  };
+  if (statusFilter) {
+    appointmentWhere.status = statusFilter;
+  }
+  if (serviceTypeFilter === "family") {
+    appointmentWhere.serviceType = "FAMILY_DOCTOR";
+  } else if (serviceTypeFilter === "one-time") {
+    appointmentWhere.serviceType = "ONE_TIME";
+  }
+
+  const [appointments, followUpTasksRaw, familyContracts] = await Promise.all([
+    prisma.appointment.findMany({
+      where: appointmentWhere,
+      include: {
+        doctor: {
+          select: {
+            fullName: true,
+          },
+        },
+      },
+      orderBy: { startAt: "asc" },
+    }),
+    prisma.carePlan.findMany({
+      where: {
+        doctorId: user.userId,
+        status: "ACTIVE",
+        nextFollowUpAt: {
+          gte: from,
+          lte: to,
+        },
+      },
+      include: {
+        member: {
+          select: {
+            id: true,
+            fullName: true,
+            familyProfile: {
+              select: {
+                ownerUserId: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { nextFollowUpAt: "asc" },
+      take: 100,
+    }),
+    prisma.familyDoctorRequest.findMany({
+      where: {
+        doctorProfileId: doctorProfile.id,
+        status: "APPROVED",
+        contractStartsAt: { lte: new Date() },
+        contractEndsAt: { gt: new Date() },
+      },
+      include: {
+        patient: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { contractEndsAt: "asc" },
+    }),
+  ]);
+
+  const oneTimeAppointments = appointments.filter((item) => item.serviceType === "ONE_TIME");
+  const familyAppointments = appointments.filter(
+    (item) => item.serviceType === "FAMILY_DOCTOR"
+  );
+
+  const oneTimePanel = oneTimeAppointments.map((item) => ({
+    appointmentId: item.id,
+    patientUserId: item.patientUserId,
+    reason: item.reason,
+    status: item.status,
+    startAt: item.startAt,
+    endAt: item.endAt,
+  }));
+
+  const familyDoctorPanel = familyContracts.map((item) => ({
+    requestId: item.id,
+    patientUserId: item.patientUserId,
+    patientDisplayName: item.patient.displayName,
+    patientEmail: item.patient.email,
+    patientAvatarUrl: item.patient.avatarUrl,
+    billingCycle: item.billingCycle,
+    billingAmount: Number(item.billingAmount),
+    contractEndsAt: item.contractEndsAt,
+  }));
+
+  const followUpMemberIds = followUpTasksRaw.map((item) => item.member.id);
+  let taggedMemberIdSet = null;
+  if (tagFilter && followUpMemberIds.length > 0) {
+    const taggedEntries = await prisma.timelineEntry.findMany({
+      where: {
+        memberId: { in: followUpMemberIds },
+        tags: {
+          some: {
+            tag: {
+              label: {
+                contains: tagFilter,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        memberId: true,
+      },
+      distinct: ["memberId"],
+    });
+    taggedMemberIdSet = new Set(taggedEntries.map((item) => item.memberId));
+  }
+
+  const monitoringQueue = followUpTasksRaw
+    .filter((item) => (taggedMemberIdSet ? taggedMemberIdSet.has(item.member.id) : true))
+    .map((item) => ({
+      carePlanId: item.id,
+      memberId: item.member.id,
+      memberName: item.member.fullName,
+      ownerUserId: item.member.familyProfile.ownerUserId,
+      nextFollowUpAt: item.nextFollowUpAt,
+      frequencyDays: item.frequencyDays,
+      status: item.status,
+    }));
+
+  const summaryCards = {
+    totalAppointments: appointments.length,
+    familyDoctorAppointments: familyAppointments.length,
+    oneTimeAppointments: oneTimeAppointments.length,
+    activeFamilyPatients: familyDoctorPanel.length,
+    monitoringTasks: monitoringQueue.length,
+  };
+
+  return {
+    data: {
+      doctor: doctorProfile,
+      summaryCards,
+      monitoringQueue,
+      familyDoctorPanel,
+      oneTimePanel,
+      filtersApplied: {
+        range,
+        serviceType: serviceTypeFilter,
+        status: statusFilter,
+        tag: tagFilter,
+        from,
+        to,
+      },
+    },
+  };
+}
+
 module.exports = {
   listDoctors,
   getDoctorDetailById,
@@ -547,4 +804,5 @@ module.exports = {
   listDoctorPatients,
   getDoctorPatientOverview,
   getDoctorIncome,
+  getDoctorDashboardV2,
 };

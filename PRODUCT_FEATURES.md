@@ -36,6 +36,8 @@
 - [x] `USER-11` [MVP] Timeline điều trị cơ bản cho cá nhân/gia đình.
 - [x] `USER-12` [MVP] Thanh toán online cho gói dịch vụ (mock checkout success/fail).
 - [x] `USER-13` [MVP] Đăng ký gói Free/Premium/Family.
+- [x] `USER-19` [MVP] Thuê bác sĩ gia đình theo tuần/tháng bằng chuyển khoản thủ công (không phụ thuộc subscription family plan).
+- [x] `USER-20` [MVP] Cho phép bệnh nhân thuê nhiều bác sĩ gia đình cùng lúc.
 - [ ] `USER-14` [POST-MVP] Theo dõi chỉ số sức khỏe nâng cao (nhập tay/đồng bộ thiết bị).
 - [ ] `USER-15` [POST-MVP] Dashboard sức khỏe nâng cao với biểu đồ xu hướng.
 - [ ] `USER-16` [POST-MVP] Nội dung y khoa kiểm duyệt (bài viết/video/infographic).
@@ -50,6 +52,7 @@
 - [x] `DOC-05` [MVP] Quản lý gói dịch vụ và SLA phản hồi.
 - [x] `DOC-06` [MVP] Quản lý lịch khám online/offline.
 - [x] `DOC-07` [MVP] Quản lý thu nhập cơ bản theo số ca và giờ trực.
+- [x] `DOC-12` [MVP] Duyệt yêu cầu thuê bác sĩ gia đình theo chu kỳ tuần/tháng và kích hoạt hợp đồng.
 - [ ] `DOC-08` [POST-MVP] Dashboard theo dõi real-time ECG/SpO2 từ Ironman Holter.
 - [ ] `DOC-09` [POST-MVP] Cảnh báo tức thì khi phát hiện chỉ số bất thường.
 - [ ] `DOC-10` [POST-MVP] Giám sát chỉ số sức khỏe bệnh nhân từ dữ liệu nhập/thiết bị.

@@ -25,6 +25,7 @@ const ROUTES = {
       profile: "/app/patient/profile",
       messages: "/app/patient/messages",
       notifications: "/app/patient/notifications",
+      familyDoctor: "/app/patient/family-doctor",
     },
     doctor: {
       overview: "/app/doctor/overview",

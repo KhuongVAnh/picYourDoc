@@ -1,46 +1,41 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getDoctorDashboardApi } from "../lib/api";
+import { getDoctorDashboardV2Api } from "../lib/api";
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime } from "../lib/date";
 import { ROUTES } from "../lib/routes";
 
-// Trả style badge trạng thái lịch hẹn để bảng lịch dễ quét nhanh.
-function getAppointmentStatusBadgeClass(status) {
-  if (status === "CONFIRMED") {
-    return "bg-emerald-100 text-emerald-700";
-  }
-  if (status === "REQUESTED") {
-    return "bg-amber-100 text-amber-700";
-  }
-  if (status === "COMPLETED") {
-    return "bg-sky-100 text-sky-700";
-  }
-  if (status === "CANCELLED") {
-    return "bg-rose-100 text-rose-700";
-  }
-  return "bg-slate-100 text-slate-700";
-}
-
-// Trang tổng quan doctor theo bố cục data-first gần mẫu tham chiếu.
+// Trang dashboard v2 cho bác sĩ với 3 vùng quản trị theo loại dịch vụ.
 export function DoctorDashboardPage() {
   const { accessToken } = useAuth();
+  const [range, setRange] = useState("week");
+  const [serviceType, setServiceType] = useState("all");
+  const [status, setStatus] = useState("");
+  const [tag, setTag] = useState("");
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
 
-  // Tải dữ liệu dashboard bác sĩ để hiển thị KPI + bảng lịch hẹn.
+  // Tải dashboard v2 theo bộ lọc hiện tại.
   useEffect(() => {
     let ignore = false;
 
     async function loadDashboard() {
       try {
-        const response = await getDoctorDashboardApi({}, accessToken);
+        const response = await getDoctorDashboardV2Api(
+          {
+            range,
+            serviceType,
+            status: status || undefined,
+            tag: tag || undefined,
+          },
+          accessToken
+        );
         if (!ignore) {
           setDashboard(response.data);
         }
       } catch (apiError) {
         if (!ignore) {
-          setError(apiError.message || "Không thể tải dashboard bác sĩ");
+          setError(apiError.message || "Không thể tải dashboard v2");
         }
       }
     }
@@ -49,125 +44,128 @@ export function DoctorDashboardPage() {
     return () => {
       ignore = true;
     };
-  }, [accessToken]);
-
-  // Tính số lịch hẹn diễn ra trong ngày hiện tại cho card KPI.
-  const todayAppointments = useMemo(() => {
-    if (!dashboard?.upcomingAppointments) {
-      return 0;
-    }
-
-    const todayKey = new Date().toISOString().slice(0, 10);
-    return dashboard.upcomingAppointments.filter((item) => {
-      return new Date(item.startAt).toISOString().slice(0, 10) === todayKey;
-    }).length;
-  }, [dashboard]);
+  }, [accessToken, range, serviceType, status, tag]);
 
   return (
     <section className="space-y-4">
+      <header className="surface-card p-4">
+        <h2 className="text-xl font-semibold text-slate-900">Doctor Dashboard V2</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Quản trị theo dõi theo thời gian, bệnh nhân dài hạn và khám một lần.
+        </p>
+
+        <div className="mt-3 grid gap-2 md:grid-cols-4">
+          <select className="input-base" onChange={(event) => setRange(event.target.value)} value={range}>
+            <option value="week">Theo tuần</option>
+            <option value="month">Theo tháng</option>
+          </select>
+          <select className="input-base" onChange={(event) => setServiceType(event.target.value)} value={serviceType}>
+            <option value="all">Tất cả dịch vụ</option>
+            <option value="family">Bác sĩ gia đình</option>
+            <option value="one-time">Khám một lần</option>
+          </select>
+          <input className="input-base" onChange={(event) => setStatus(event.target.value)} placeholder="Lọc status" value={status} />
+          <input className="input-base" onChange={(event) => setTag(event.target.value)} placeholder="Lọc tag bệnh lý" value={tag} />
+        </div>
+      </header>
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      {dashboard ? (
+      {!dashboard ? (
+        <article className="surface-card p-5">
+          <p className="text-sm text-slate-600">Đang tải dashboard...</p>
+        </article>
+      ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-5">
             <article className="surface-card p-4">
-              <p className="text-sm text-slate-500">Bệnh nhân</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">{dashboard.summaryCards.totalAppointments}</p>
+              <p className="text-sm text-slate-500">Tổng lịch</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{dashboard.summaryCards.totalAppointments}</p>
             </article>
             <article className="surface-card p-4">
-              <p className="text-sm text-slate-500">Tin nhắn chờ</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">{dashboard.summaryCards.requestedAppointments}</p>
+              <p className="text-sm text-slate-500">Lịch gia đình</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{dashboard.summaryCards.familyDoctorAppointments}</p>
             </article>
             <article className="surface-card p-4">
-              <p className="text-sm text-slate-500">Lịch hẹn hôm nay</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">{todayAppointments}</p>
+              <p className="text-sm text-slate-500">Lịch khám lẻ</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{dashboard.summaryCards.oneTimeAppointments}</p>
+            </article>
+            <article className="surface-card p-4">
+              <p className="text-sm text-slate-500">Bệnh nhân dài hạn</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{dashboard.summaryCards.activeFamilyPatients}</p>
+            </article>
+            <article className="surface-card p-4">
+              <p className="text-sm text-slate-500">Task theo dõi</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{dashboard.summaryCards.monitoringTasks}</p>
             </article>
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+          <div className="grid gap-4 xl:grid-cols-3">
             <article className="surface-card p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">Lịch Hẹn Sắp Tới</h3>
-                <Link className="text-sm font-semibold text-brand-700 underline" to={ROUTES.app.doctor.schedule}>
-                  Xem tất cả
-                </Link>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[680px] table-auto border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-left text-slate-500">
-                      <th className="px-3 py-2 font-semibold">Bệnh nhân</th>
-                      <th className="px-3 py-2 font-semibold">Thời gian</th>
-                      <th className="px-3 py-2 font-semibold">Trạng thái</th>
-                      <th className="px-3 py-2 font-semibold">Hành động</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.upcomingAppointments.slice(0, 8).map((item) => (
-                      <tr key={item.id} className="border-b border-slate-100">
-                        <td className="px-3 py-3 text-slate-900">{item.patientUserId}</td>
-                        <td className="px-3 py-3 text-slate-700">{formatDateTime(item.startAt)}</td>
-                        <td className="px-3 py-3">
-                          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${getAppointmentStatusBadgeClass(item.status)}`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-3 py-3">
-                          {item.status === "CONFIRMED" ? (
-                            <Link className="btn-primary inline-flex px-3 py-1.5 text-xs" to={ROUTES.app.doctor.consult(item.id)}>
-                              Bắt đầu tư vấn
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-slate-400">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <h3 className="text-base font-semibold text-slate-900">Theo dõi theo thời gian</h3>
+              {dashboard.monitoringQueue.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">Không có task theo dõi trong phạm vi đã chọn.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {dashboard.monitoringQueue.map((task) => (
+                    <li className="rounded-lg border border-slate-200 bg-slate-50 p-2" key={task.carePlanId}>
+                      <p className="text-sm font-semibold text-slate-900">{task.memberName}</p>
+                      <p className="text-xs text-slate-600">
+                        Follow-up: {task.nextFollowUpAt ? formatDateTime(task.nextFollowUpAt) : "-"}
+                      </p>
+                      <Link className="text-xs text-brand-700 underline" to={ROUTES.app.doctor.patientOverview(task.memberId)}>
+                        Mở hồ sơ
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </article>
 
-            <div className="space-y-4">
-              <article className="surface-card p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">SLA Snapshot</h3>
-                <p className="mt-2 text-sm text-slate-700">
-                  Avg response: <span className="font-semibold">{dashboard.slaMetrics.avgResponseMinutes ?? "-"} phút</span>
-                </p>
-                <p className="mt-1 text-sm text-slate-700">
-                  Within 15m: {dashboard.slaMetrics.within15mCount}/{dashboard.slaMetrics.totalMeasured}
-                </p>
-                <Link className="btn-soft mt-3 inline-flex px-4 py-2 text-sm" to={ROUTES.app.doctor.sla}>
-                  Mở trang SLA
-                </Link>
-              </article>
+            <article className="surface-card p-5">
+              <h3 className="text-base font-semibold text-slate-900">Bệnh nhân bác sĩ gia đình</h3>
+              {dashboard.familyDoctorPanel.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">Chưa có bệnh nhân dài hạn active.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {dashboard.familyDoctorPanel.map((item) => (
+                    <li className="rounded-lg border border-slate-200 bg-slate-50 p-2" key={item.requestId}>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {item.patientDisplayName || item.patientEmail || item.patientUserId}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        Thuê {item.billingCycle === "WEEKLY" ? "theo tuần" : "theo tháng"} •{" "}
+                        {Number(item.billingAmount || 0).toLocaleString("vi-VN")} VND
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Hiệu lực đến: {formatDateTime(item.contractEndsAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
 
-              <article className="surface-card p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Follow-up</h3>
-                {dashboard.followUpTasks.length === 0 ? (
-                  <p className="mt-2 text-sm text-slate-600">Không có task overdue trong 7 ngày tới.</p>
-                ) : (
-                  <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                    {dashboard.followUpTasks.slice(0, 4).map((task) => (
-                      <li key={task.id} className="rounded-lg bg-slate-50 p-2">
-                        <p className="font-semibold">{task.memberName}</p>
-                        <p className="text-xs text-slate-500">{formatDateTime(task.nextFollowUpAt)}</p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link className="btn-soft mt-3 inline-flex px-4 py-2 text-sm" to={ROUTES.app.doctor.followUps}>
-                  Xem follow-up
-                </Link>
-              </article>
-            </div>
+            <article className="surface-card p-5">
+              <h3 className="text-base font-semibold text-slate-900">Bệnh nhân khám một lần</h3>
+              {dashboard.oneTimePanel.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">Không có lịch khám một lần trong phạm vi đã chọn.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {dashboard.oneTimePanel.map((item) => (
+                    <li className="rounded-lg border border-slate-200 bg-slate-50 p-2" key={item.appointmentId}>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Patient: {item.patientUserId}
+                      </p>
+                      <p className="text-xs text-slate-600">{item.reason || "Không có lý do khám"}</p>
+                      <p className="text-xs text-slate-500">{formatDateTime(item.startAt)}</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
           </div>
         </>
-      ) : (
-        <article className="surface-card p-5">
-          <p className="text-sm text-slate-600">Đang tải dữ liệu dashboard...</p>
-        </article>
       )}
     </section>
   );

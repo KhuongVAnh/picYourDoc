@@ -92,7 +92,7 @@ async function getTimelineEntries(req, res, next) {
   }
 }
 
-// Xử lý API doctor/admin tạo timeline note thủ công.
+// Xử lý API tạo timeline note thủ công theo ACL mới.
 async function createTimelineNote(req, res, next) {
   try {
     const result = await recordsService.createTimelineNote(
@@ -101,6 +101,75 @@ async function createTimelineNote(req, res, next) {
       req.body
     );
     return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Xử lý API cập nhật timeline entry theo quyền patient/family doctor/admin.
+async function updateTimelineEntry(req, res, next) {
+  try {
+    const result = await recordsService.updateTimelineEntry(
+      req.user,
+      req.params.entryId,
+      req.body
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Xử lý API lấy danh sách tài liệu của member theo filter.
+async function getMemberDocuments(req, res, next) {
+  try {
+    const result = await recordsService.getMemberDocuments(
+      req.user,
+      req.params.memberId,
+      req.query
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Xử lý API patient chia sẻ hồ sơ tạm cho một appointment cụ thể.
+async function shareRecordsForAppointment(req, res, next) {
+  try {
+    const result = await recordsService.shareRecordsForAppointment(
+      req.user,
+      req.params.appointmentId,
+      req.body
+    );
+    return res.status(201).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Xử lý API lấy danh sách hồ sơ đang được chia sẻ cho appointment.
+async function getSharedRecordsForAppointment(req, res, next) {
+  try {
+    const result = await recordsService.getSharedRecordsForAppointment(
+      req.user,
+      req.params.appointmentId
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Xử lý API patient thu hồi một link chia sẻ hồ sơ.
+async function revokeSharedRecordForAppointment(req, res, next) {
+  try {
+    const result = await recordsService.revokeSharedRecordForAppointment(
+      req.user,
+      req.params.appointmentId,
+      req.params.linkId
+    );
+    return res.status(200).json(result);
   } catch (error) {
     return next(error);
   }
@@ -140,6 +209,11 @@ module.exports = {
   upsertHealthProfile,
   getTimelineEntries,
   createTimelineNote,
+  updateTimelineEntry,
+  getMemberDocuments,
+  shareRecordsForAppointment,
+  getSharedRecordsForAppointment,
+  revokeSharedRecordForAppointment,
   getCarePlan,
   upsertCarePlan,
 };

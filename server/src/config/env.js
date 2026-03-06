@@ -17,6 +17,14 @@ const env = {
   smtpUser: process.env.SMTP_USER || "",
   smtpPass: process.env.SMTP_PASS || "",
   smtpFrom: process.env.SMTP_FROM || "",
+  familyDoctorAdminBankOwner:
+    process.env.FAMILY_DOCTOR_ADMIN_BANK_OWNER || "CONG TY PICKYOURDOC",
+  familyDoctorAdminBankAccount:
+    process.env.FAMILY_DOCTOR_ADMIN_BANK_ACCOUNT || "000000000000",
+  familyDoctorAdminBankName:
+    process.env.FAMILY_DOCTOR_ADMIN_BANK_NAME || "Vietcombank",
+  familyDoctorWeeklyFee: Number(process.env.FAMILY_DOCTOR_WEEKLY_FEE || 349000),
+  familyDoctorMonthlyFee: Number(process.env.FAMILY_DOCTOR_MONTHLY_FEE || 1199000),
 };
 
 module.exports = { env };

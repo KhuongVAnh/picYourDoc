@@ -356,6 +356,28 @@ async function main() {
       slaMinutes: 15,
       isPriority: true,
     },
+    {
+      code: "FAMILY_DOCTOR_WEEKLY",
+      name: "Family Doctor Weekly",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80",
+      monthlyPrice: 249000,
+      consultSessionQuota: 4,
+      familyMemberLimit: 6,
+      slaMinutes: 120,
+      isPriority: true,
+    },
+    {
+      code: "FAMILY_DOCTOR_MONTHLY",
+      name: "Family Doctor Monthly",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1631815589968-fdb09a223b1e?auto=format&fit=crop&w=600&q=80",
+      monthlyPrice: 899000,
+      consultSessionQuota: 16,
+      familyMemberLimit: 6,
+      slaMinutes: 30,
+      isPriority: true,
+    },
   ];
 
   for (const plan of planSeeds) {
@@ -378,6 +400,37 @@ async function main() {
     });
   }
   console.log("[SEED] Hoàn tất subscription plans.");
+
+  // Seed bộ tag hệ thống để hỗ trợ phân loại hồ sơ bệnh sử trong Medical Vault.
+  const predefinedTags = [
+    { type: "DISEASE", code: "HYPERTENSION", label: "Tăng huyết áp" },
+    { type: "DISEASE", code: "DIABETES", label: "Đái tháo đường" },
+    { type: "DISEASE", code: "ASTHMA", label: "Hen suyễn" },
+    { type: "SPECIALTY", code: "CARDIOLOGY", label: "Tim mạch" },
+    { type: "SPECIALTY", code: "ENDOCRINOLOGY", label: "Nội tiết" },
+    { type: "SPECIALTY", code: "PEDIATRICS", label: "Nhi khoa" },
+  ];
+
+  for (const tag of predefinedTags) {
+    await prisma.recordTag.upsert({
+      where: {
+        type_code: {
+          type: tag.type,
+          code: tag.code,
+        },
+      },
+      update: {
+        label: tag.label,
+        isActive: true,
+      },
+      create: {
+        type: tag.type,
+        code: tag.code,
+        label: tag.label,
+      },
+    });
+  }
+  console.log("[SEED] Hoàn tất predefined record tags.");
 
   const patientDemo = upsertedUsers.find((item) => item.email === "patient.demo@picyourdoc.local");
   const premiumPlan = await prisma.subscriptionPlan.findUnique({

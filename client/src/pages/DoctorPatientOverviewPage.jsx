@@ -8,7 +8,7 @@ import {
 import { useAuth } from "../auth/useAuth";
 import { formatDateTime } from "../lib/date";
 import { ROUTES } from "../lib/routes";
-import { uploadOptimizedImage } from "../lib/cloudinary";
+import { uploadMedicalDocument, uploadOptimizedImage } from "../lib/cloudinary";
 
 // Chuẩn hóa mảng URL ảnh để render timeline/care plan an toàn.
 function normalizeImageUrls(value) {
@@ -31,7 +31,7 @@ export function DoctorPatientOverviewPage() {
   const [carePlanImageUrls, setCarePlanImageUrls] = useState([]);
   const [timelineTitle, setTimelineTitle] = useState("");
   const [timelineSummary, setTimelineSummary] = useState("");
-  const [timelineImageUrls, setTimelineImageUrls] = useState([]);
+  const [timelineAttachments, setTimelineAttachments] = useState([]);
   const [isUploadingCarePlanImage, setIsUploadingCarePlanImage] = useState(false);
   const [isUploadingTimelineImage, setIsUploadingTimelineImage] = useState(false);
   const [error, setError] = useState("");
@@ -108,7 +108,7 @@ export function DoctorPatientOverviewPage() {
     }
   }
 
-  // Upload ảnh minh họa cho timeline note.
+  // Upload tài liệu minh họa cho timeline note.
   async function handleUploadTimelineImage(event) {
     const file = event.target.files?.[0];
     if (!file) {
@@ -118,11 +118,11 @@ export function DoctorPatientOverviewPage() {
     setError("");
     setIsUploadingTimelineImage(true);
     try {
-      const imageUrl = await uploadOptimizedImage({
+      const attachment = await uploadMedicalDocument({
         file,
         folder: "timeline",
       });
-      setTimelineImageUrls((previous) => [...previous, imageUrl]);
+      setTimelineAttachments((previous) => [...previous, attachment]);
     } catch (uploadError) {
       setError(uploadError.message || "Không thể upload ảnh timeline.");
     } finally {
@@ -173,13 +173,14 @@ export function DoctorPatientOverviewPage() {
           summary: timelineSummary,
           entryType: "NOTE",
           payload: {},
-          imageUrls: timelineImageUrls,
+          attachments: timelineAttachments,
+          sourceType: "DOCTOR_NOTE",
         },
         accessToken
       );
       setTimelineTitle("");
       setTimelineSummary("");
-      setTimelineImageUrls([]);
+      setTimelineAttachments([]);
       const refreshed = await getDoctorPatientOverviewApi(memberId, accessToken);
       setOverview(refreshed.data);
     } catch (apiError) {
@@ -344,10 +345,18 @@ export function DoctorPatientOverviewPage() {
                     type="file"
                   />
                 </label>
-                {timelineImageUrls.length > 0 ? (
-                  <div className="mt-2 grid gap-2 md:grid-cols-3">
-                    {timelineImageUrls.map((imageUrl) => (
-                      <img className="h-24 w-full rounded-lg object-cover" key={imageUrl} src={imageUrl} />
+                {timelineAttachments.length > 0 ? (
+                  <div className="mt-2 grid gap-2">
+                    {timelineAttachments.map((attachment, index) => (
+                      <a
+                        className="text-xs text-brand-700 underline"
+                        href={attachment.fileUrl}
+                        key={`${attachment.fileUrl}-${index}`}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {attachment.fileName}
+                      </a>
                     ))}
                   </div>
                 ) : null}
@@ -369,10 +378,18 @@ export function DoctorPatientOverviewPage() {
                       {entry.entryType} - {entry.title}
                     </p>
                     <p className="text-sm text-slate-700">{entry.summary}</p>
-                    {normalizeImageUrls(entry.imageUrls).length > 0 ? (
-                      <div className="mt-2 grid gap-2 md:grid-cols-3">
-                        {normalizeImageUrls(entry.imageUrls).map((imageUrl) => (
-                          <img className="h-24 w-full rounded-lg object-cover" key={imageUrl} src={imageUrl} />
+                    {Array.isArray(entry.attachments) && entry.attachments.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {entry.attachments.map((file) => (
+                          <a
+                            className="text-xs text-brand-700 underline"
+                            href={file.fileUrl}
+                            key={file.id}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {file.fileName} ({file.kind})
+                          </a>
                         ))}
                       </div>
                     ) : null}

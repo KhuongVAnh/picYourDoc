@@ -4,6 +4,7 @@ const { env } = require("../../config/env");
 const { scheduleReminderLogsForAppointment } = require("../reminders/reminder.service");
 const recordsService = require("../records/records.service");
 const { ACTIVE_APPOINTMENT_STATUSES } = require("./appointments.constants");
+
 const APPOINTMENT_STATUS_SET = new Set([
   "REQUESTED",
   "CONFIRMED",
@@ -31,6 +32,25 @@ function ensureTimeRange(startAt, endAt) {
     error.statusCode = 400;
     throw error;
   }
+}
+
+// Xác định loại dịch vụ cuộc hẹn dựa trên hợp đồng bác sĩ gia đình đang active.
+async function resolveAppointmentServiceType({ patientUserId, doctorId }) {
+  const activeContract = await prisma.familyDoctorRequest.findFirst({
+    where: {
+      patientUserId,
+      doctorProfileId: doctorId,
+      status: "APPROVED",
+      contractStartsAt: { lte: new Date() },
+      contractEndsAt: { gt: new Date() },
+    },
+    select: { id: true },
+  });
+
+  if (activeContract) {
+    return "FAMILY_DOCTOR";
+  }
+  return "ONE_TIME";
 }
 
 // Lấy hồ sơ bác sĩ theo ID, nếu không tồn tại thì trả lỗi 404.
@@ -88,6 +108,10 @@ async function createAppointmentBySlot({ patientUserId, doctorId, slotId, reason
   });
 
   const conflictFlag = overlapConflict || slot.isBooked || !slot.isActive;
+  const serviceType = await resolveAppointmentServiceType({
+    patientUserId,
+    doctorId: doctor.id,
+  });
 
   const appointment = await prisma.appointment.create({
     data: {
@@ -100,6 +124,7 @@ async function createAppointmentBySlot({ patientUserId, doctorId, slotId, reason
       reason: reason || null,
       conflictFlag,
       slotId: slot.id,
+      serviceType,
     },
     include: {
       doctor: {
@@ -134,6 +159,10 @@ async function createAppointmentByProposal({
     startAt,
     endAt,
   });
+  const serviceType = await resolveAppointmentServiceType({
+    patientUserId,
+    doctorId: doctor.id,
+  });
 
   const appointment = await prisma.appointment.create({
     data: {
@@ -145,6 +174,7 @@ async function createAppointmentByProposal({
       endAt,
       reason: reason || null,
       conflictFlag,
+      serviceType,
     },
     include: {
       doctor: {

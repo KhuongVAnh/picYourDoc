@@ -6,6 +6,7 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "test": "echo \"No tests configured\"",
+    "test:security": "node smoke.security.test.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

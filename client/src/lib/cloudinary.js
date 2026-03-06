@@ -1,7 +1,16 @@
 const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "";
 const CLOUDINARY_UNSIGNED_PRESET = import.meta.env.VITE_CLOUDINARY_UNSIGNED_PRESET || "";
+const CLOUDINARY_UNSIGNED_PRESET_RAW =
+  import.meta.env.VITE_CLOUDINARY_UNSIGNED_PRESET_RAW || "";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 // Tạo object lỗi chuẩn để hiển thị thông báo upload nhất quán ở UI.
 function createUploadError(message) {
@@ -20,6 +29,26 @@ function validateImageFile(file) {
 
   if (file.size > MAX_FILE_SIZE_BYTES) {
     throw createUploadError("Kích thước ảnh tối đa là 5MB.");
+  }
+}
+
+// Kiểm tra file tài liệu đầu vào cho luồng upload hồ sơ bệnh án.
+function validateMedicalDocumentFile(file) {
+  if (!file) {
+    throw createUploadError("Vui lòng chọn tệp tài liệu.");
+  }
+
+  if (!ALLOWED_DOCUMENT_MIME_TYPES.has(file.type)) {
+    throw createUploadError("Chỉ hỗ trợ PDF, JPG, JPEG, PNG hoặc WEBP.");
+  }
+
+  const maxSize = file.type === "application/pdf" ? MAX_DOCUMENT_SIZE_BYTES : MAX_FILE_SIZE_BYTES;
+  if (file.size > maxSize) {
+    throw createUploadError(
+      file.type === "application/pdf"
+        ? "Kích thước PDF tối đa là 10MB."
+        : "Kích thước ảnh tối đa là 5MB."
+    );
   }
 }
 
@@ -106,6 +135,35 @@ async function uploadImageToCloudinary({ blob, folder, originalFileName }) {
   return payload.secure_url;
 }
 
+// Upload file tài liệu (PDF/raw) lên Cloudinary bằng unsigned preset raw.
+async function uploadRawFileToCloudinary({ file, folder }) {
+  if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UNSIGNED_PRESET_RAW) {
+    throw createUploadError("Thiếu cấu hình Cloudinary raw preset trong frontend env.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file, file.name || "medical-document.pdf");
+  formData.append("upload_preset", CLOUDINARY_UNSIGNED_PRESET_RAW);
+  if (folder) {
+    formData.append("folder", folder);
+  }
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
+    {
+      method: "POST",
+      body: formData,
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.secure_url) {
+    throw createUploadError(payload.error?.message || "Upload tài liệu thất bại.");
+  }
+
+  return payload.secure_url;
+}
+
 // Validate + resize + upload ảnh và trả về secure URL đã lưu trên Cloudinary.
 async function uploadOptimizedImage({ file, folder }) {
   validateImageFile(file);
@@ -117,11 +175,43 @@ async function uploadOptimizedImage({ file, folder }) {
   });
 }
 
+// Upload tài liệu y tế đa định dạng và trả metadata chuẩn để lưu vào timeline attachment.
+async function uploadMedicalDocument({ file, folder }) {
+  validateMedicalDocumentFile(file);
+
+  if (file.type === "application/pdf") {
+    const fileUrl = await uploadRawFileToCloudinary({ file, folder });
+    return {
+      fileName: file.name,
+      fileUrl,
+      mimeType: file.type,
+      fileSizeBytes: file.size,
+      provider: "cloudinary",
+      kind: "PDF",
+    };
+  }
+
+  const fileUrl = await uploadOptimizedImage({ file, folder });
+  return {
+    fileName: file.name,
+    fileUrl,
+    mimeType: file.type,
+    fileSizeBytes: file.size,
+    provider: "cloudinary",
+    kind: "IMAGE",
+  };
+}
+
 export {
   validateImageFile,
+  validateMedicalDocumentFile,
   resizeImageFile,
   uploadImageToCloudinary,
+  uploadRawFileToCloudinary,
   uploadOptimizedImage,
+  uploadMedicalDocument,
   MAX_FILE_SIZE_BYTES,
+  MAX_DOCUMENT_SIZE_BYTES,
   ALLOWED_MIME_TYPES,
+  ALLOWED_DOCUMENT_MIME_TYPES,
 };

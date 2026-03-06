@@ -24,6 +24,7 @@ import { SubscriptionCheckoutPage } from "./pages/SubscriptionCheckoutPage";
 import { SubscriptionHistoryPage } from "./pages/SubscriptionHistoryPage";
 import { PatientMessagesPage } from "./pages/PatientMessagesPage";
 import { PatientNotificationsPage } from "./pages/PatientNotificationsPage";
+import { PatientFamilyDoctorPage } from "./pages/PatientFamilyDoctorPage";
 import { DoctorSchedulePage } from "./pages/DoctorSchedulePage";
 import { DoctorPatientsPage } from "./pages/DoctorPatientsPage";
 import { DoctorPatientOverviewPage } from "./pages/DoctorPatientOverviewPage";
@@ -66,6 +67,7 @@ function App() {
         <Route element={<SubscriptionHistoryPage />} path="subscription/history" />
         <Route element={<PatientMessagesPage />} path="messages" />
         <Route element={<PatientNotificationsPage />} path="notifications" />
+        <Route element={<PatientFamilyDoctorPage />} path="family-doctor" />
       </Route>
 
       <Route element={<RoleLayout allowedRoles={["doctor"]} />} path="/app/doctor">

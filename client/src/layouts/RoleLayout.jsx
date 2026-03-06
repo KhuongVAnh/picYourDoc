@@ -1,22 +1,18 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { NavLink, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/useAuth";
 import { ROUTES } from "../lib/routes";
 
 const PATIENT_NAV_ITEMS = [
-  { label: "Tìm bác sĩ", to: ROUTES.app.patient.doctors },
-  { label: "Lịch hẹn", to: ROUTES.app.patient.appointments },
-  { label: "Hồ sơ sức khỏe", to: ROUTES.app.patient.family },
-  { label: "Tin nhắn", to: ROUTES.app.patient.messages },
-  { label: "Gói dịch vụ", to: ROUTES.app.patient.subscriptionPlans },
-];
-
-const PATIENT_MOBILE_ITEMS = [
-  { label: "Tổng quan", to: ROUTES.app.patient.overview },
-  { label: "Bác sĩ", to: ROUTES.app.patient.doctors },
-  { label: "Lịch", to: ROUTES.app.patient.appointments },
-  { label: "Gia đình", to: ROUTES.app.patient.family },
-  { label: "Gói", to: ROUTES.app.patient.subscriptionPlans },
+  { label: "Bảng điều khiển", to: ROUTES.app.patient.overview, icon: "🏠" },
+  { label: "Tìm bác sĩ", to: ROUTES.app.patient.doctors, icon: "🔎" },
+  { label: "Lịch hẹn", to: ROUTES.app.patient.appointments, icon: "📅" },
+  { label: "Hồ sơ gia đình", to: ROUTES.app.patient.family, icon: "👨‍👩‍👧‍👦" },
+  { label: "Bác sĩ gia đình", to: ROUTES.app.patient.familyDoctor, icon: "🩺" },
+  { label: "Tin nhắn", to: ROUTES.app.patient.messages, icon: "💬" },
+  { label: "Thông báo", to: ROUTES.app.patient.notifications, icon: "🔔" },
+  { label: "Gói dịch vụ", to: ROUTES.app.patient.subscriptionPlans, icon: "💳" },
+  { label: "Tài khoản", to: ROUTES.app.patient.profile, icon: "👤" },
 ];
 
 const DOCTOR_NAV_ITEMS = [
@@ -29,28 +25,12 @@ const DOCTOR_NAV_ITEMS = [
   { label: "Cài đặt", to: ROUTES.app.doctor.settings, icon: "⚙️" },
 ];
 
-// Trả class cho link ở top nav patient.
-function getPatientNavClass({ isActive }) {
-  if (isActive) {
-    return "rounded-full bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 no-underline";
-  }
-  return "rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 hover:no-underline";
-}
-
-// Trả class cho link trong sidebar doctor.
-function getDoctorNavClass({ isActive }) {
+// Trả class cho link trong sidebar để dùng chung cho patient/doctor.
+function getSidebarNavClass({ isActive }) {
   if (isActive) {
     return "flex items-center gap-2 rounded-xl bg-white/20 px-3 py-2 text-sm font-semibold text-white no-underline";
   }
   return "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-blue-100 transition hover:bg-white/10 hover:text-white hover:no-underline";
-}
-
-// Trả class cho tab mobile patient.
-function getPatientMobileNavClass({ isActive }) {
-  if (isActive) {
-    return "rounded-lg bg-brand-700 px-3 py-2 text-xs font-semibold text-white no-underline";
-  }
-  return "rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-600 no-underline";
 }
 
 // Render avatar fallback theo tên/email user khi chưa có ảnh.
@@ -73,65 +53,11 @@ function UserAvatar({ user }) {
   );
 }
 
-// Shell riêng cho patient: top navigation sáng giống mẫu clinical dashboard.
-function PatientShell({ user, onLogout }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="flex items-center gap-6">
-            <NavLink className="no-underline" to={ROUTES.app.patient.overview}>
-              <span className="text-2xl font-extrabold tracking-tight text-brand-700">PickYourDoc</span>
-            </NavLink>
-            <nav className="hidden items-center gap-1 lg:flex">
-              {PATIENT_NAV_ITEMS.map((item) => (
-                <NavLink key={item.to} className={getPatientNavClass} to={item.to}>
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <UserAvatar user={user} />
-            <div className="hidden text-right md:block">
-              <p className="text-sm font-semibold text-slate-900">
-                Chào, {user?.displayName || "Bạn"}
-              </p>
-              <p className="text-xs text-slate-500">{user?.email}</p>
-            </div>
-            <NavLink className="btn-soft px-4 py-2 text-sm" to={ROUTES.app.patient.profile}>
-              Tài khoản
-            </NavLink>
-            <button className="btn-soft px-4 py-2 text-sm" onClick={onLogout} type="button">
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-200 bg-slate-50 px-4 py-2 lg:hidden">
-          <div className="mx-auto flex w-full max-w-[1320px] gap-2 overflow-x-auto">
-            {PATIENT_MOBILE_ITEMS.map((item) => (
-              <NavLink key={item.to} className={getPatientMobileNavClass} to={item.to}>
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-6">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
-
-// Shell riêng cho doctor: sidebar xanh đậm + topbar dữ liệu.
-function DoctorShell({ user, onLogout }) {
+// Render shell sidebar dùng chung cho các role cần giao diện kiểu console.
+function SidebarShell({ navItems, shellTitle, shellSubtitle, heading, description, user, onLogout }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Đóng drawer mobile sau khi chọn một mục để tránh che màn hình.
+  // Đóng drawer mobile sau khi chọn một mục để tránh che nội dung.
   function handleCloseDrawer() {
     setIsDrawerOpen(false);
   }
@@ -142,11 +68,11 @@ function DoctorShell({ user, onLogout }) {
         <aside className="hidden w-[280px] shrink-0 bg-gradient-to-b from-brand-700 via-brand-800 to-brand-900 p-5 text-white lg:block">
           <div className="mb-6 border-b border-white/20 pb-4">
             <p className="text-2xl font-bold tracking-tight">PickYourDoc</p>
-            <p className="mt-1 text-xs text-blue-100">Doctor Console</p>
+            <p className="mt-1 text-xs text-blue-100">{shellSubtitle}</p>
           </div>
           <nav className="space-y-1">
-            {DOCTOR_NAV_ITEMS.map((item) => (
-              <NavLink key={item.to} className={getDoctorNavClass} to={item.to}>
+            {navItems.map((item) => (
+              <NavLink key={item.to} className={getSidebarNavClass} to={item.to}>
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
               </NavLink>
@@ -166,8 +92,8 @@ function DoctorShell({ user, onLogout }) {
                   Menu
                 </button>
                 <div>
-                  <h1 className="text-xl font-bold text-slate-900">Bảng Điều Khiển Bác Sĩ</h1>
-                  <p className="text-sm text-slate-500">Theo dõi lịch khám và phiên tư vấn</p>
+                  <h1 className="text-xl font-bold text-slate-900">{heading}</h1>
+                  <p className="text-sm text-slate-500">{description}</p>
                 </div>
               </div>
 
@@ -175,7 +101,7 @@ function DoctorShell({ user, onLogout }) {
                 <UserAvatar user={user} />
                 <div className="hidden text-right md:block">
                   <p className="text-sm font-semibold text-slate-900">
-                    Chào, {user?.displayName || "Bác sĩ"}
+                    Chào, {user?.displayName || shellTitle}
                   </p>
                   <p className="text-xs text-slate-500">{user?.email}</p>
                 </div>
@@ -205,10 +131,10 @@ function DoctorShell({ user, onLogout }) {
                   </button>
                 </div>
                 <nav className="space-y-1">
-                  {DOCTOR_NAV_ITEMS.map((item) => (
+                  {navItems.map((item) => (
                     <NavLink
                       key={item.to}
-                      className={getDoctorNavClass}
+                      className={getSidebarNavClass}
                       onClick={handleCloseDrawer}
                       to={item.to}
                     >
@@ -229,6 +155,36 @@ function DoctorShell({ user, onLogout }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Shell riêng cho patient dùng side navigation kiểu console.
+function PatientShell({ user, onLogout }) {
+  return (
+    <SidebarShell
+      description="Quản lý lịch hẹn và hồ sơ sức khỏe gia đình"
+      heading="Bảng Điều Khiển Bệnh Nhân"
+      navItems={PATIENT_NAV_ITEMS}
+      onLogout={onLogout}
+      shellSubtitle="Patient Console"
+      shellTitle="Bạn"
+      user={user}
+    />
+  );
+}
+
+// Shell riêng cho doctor với side navigation dữ liệu.
+function DoctorShell({ user, onLogout }) {
+  return (
+    <SidebarShell
+      description="Theo dõi lịch khám và phiên tư vấn"
+      heading="Bảng Điều Khiển Bác Sĩ"
+      navItems={DOCTOR_NAV_ITEMS}
+      onLogout={onLogout}
+      shellSubtitle="Doctor Console"
+      shellTitle="Bác sĩ"
+      user={user}
+    />
   );
 }
 
@@ -284,4 +240,3 @@ export function RoleLayout({ allowedRoles }) {
     </div>
   );
 }
-
